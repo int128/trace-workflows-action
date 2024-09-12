@@ -10,10 +10,9 @@ inputs:
     description: GitHub Token
     required: true
     default: ${{ github.token }}
-  enable-oltp:
-    description: Enable OLTP
-    required: true
-    default: 'false'
+  oltp-endpoint:
+    description: If set, export traces. For example, http://localhost:4318/v1/traces
+    required: false
 
 runs:
   using: 'node20'

@@ -3,13 +3,18 @@ import * as github from '@actions/github'
 import { run } from './run.js'
 import { NodeSDK } from '@opentelemetry/sdk-node'
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto'
-import { ConsoleSpanExporter } from '@opentelemetry/sdk-trace-node'
+import { ConsoleSpanExporter, SpanExporter } from '@opentelemetry/sdk-trace-node'
 
 const main = async (): Promise<void> => {
-  const enableOTLP = core.getBooleanInput('enable-oltp', { required: true })
-  const sdk = new NodeSDK({
-    traceExporter: enableOTLP ? new OTLPTraceExporter() : new ConsoleSpanExporter(),
-  })
+  let traceExporter: SpanExporter = new ConsoleSpanExporter()
+  const oltpEndpoint = core.getInput('oltp-endpoint')
+  if (oltpEndpoint) {
+    traceExporter = new OTLPTraceExporter({
+      url: oltpEndpoint,
+    })
+  }
+
+  const sdk = new NodeSDK({ traceExporter })
   sdk.start()
 
   try {
