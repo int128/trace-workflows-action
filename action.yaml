@@ -5,7 +5,7 @@ inputs:
   sha:
     description: Target commit SHA
     required: true
-    default: ${{ github.sha }}
+    default: ${{ github.event.pull_request.head.sha || github.sha }}
   token:
     description: GitHub Token
     required: true
