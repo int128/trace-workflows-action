@@ -21,6 +21,8 @@ const main = async (): Promise<void> => {
     await run({
       owner: github.context.repo.owner,
       repo: github.context.repo.repo,
+      eventName: github.context.eventName,
+      ref: github.context.ref,
       sha: core.getInput('sha', { required: true }),
       token: core.getInput('token', { required: true }),
     })
