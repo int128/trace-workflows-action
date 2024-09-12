@@ -40,6 +40,9 @@ export const run = async (inputs: Inputs): Promise<void> => {
     (span) => {
       try {
         for (const workflowRun of workflowRuns) {
+          if (workflowRun.completedAt == null) {
+            continue
+          }
           const statusCode = workflowRun.conclusion === CheckConclusionState.Success ? 'OK' : 'ERROR'
           tracer.startActiveSpan(
             workflowRun.workflowName,
@@ -52,6 +55,12 @@ export const run = async (inputs: Inputs): Promise<void> => {
             (span) => {
               try {
                 for (const job of workflowRun.jobs) {
+                  if (job.startedAt == null) {
+                    continue
+                  }
+                  if (job.completedAt == null) {
+                    continue
+                  }
                   const statusCode = job.conclusion === CheckConclusionState.Success ? 'OK' : 'ERROR'
                   tracer.startActiveSpan(
                     job.name,

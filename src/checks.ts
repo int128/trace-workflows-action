@@ -8,7 +8,7 @@ export type WorkflowRun = {
   status: CheckStatusState
   conclusion: CheckConclusionState | null | undefined
   createdAt: Date
-  completedAt: Date
+  completedAt: Date | undefined
   jobs: Job[]
 }
 
@@ -16,8 +16,8 @@ export type Job = {
   name: string
   status: CheckStatusState
   conclusion: CheckConclusionState | null | undefined
-  startedAt: Date
-  completedAt: Date
+  startedAt: Date | undefined
+  completedAt: Date | undefined
 }
 
 export const summaryListChecksQuery = (q: ListChecksQuery): WorkflowRun[] => {
@@ -37,30 +37,33 @@ export const summaryListChecksQuery = (q: ListChecksQuery): WorkflowRun[] => {
     const jobs: Job[] = []
     for (const checkRun of checkSuite.checkRuns.nodes) {
       assert(checkRun != null)
-      if (checkRun.startedAt == null) {
-        continue
-      }
-      if (checkRun.completedAt == null) {
-        continue
-      }
       jobs.push({
         name: checkRun.name,
         status: checkRun.status,
         conclusion: checkRun.conclusion,
-        startedAt: new Date(checkRun.startedAt),
-        completedAt: new Date(checkRun.completedAt),
+        startedAt: toDate(checkRun.startedAt),
+        completedAt: toDate(checkRun.completedAt),
       })
     }
 
-    const workflowCompletedAt = new Date(Math.max(...jobs.map((job) => job.completedAt.getTime())))
     return {
       event: checkSuite.workflowRun.event,
       workflowName: checkSuite.workflowRun.workflow.name,
       status: checkSuite.status,
       conclusion: checkSuite.conclusion,
       createdAt: new Date(checkSuite.createdAt),
-      completedAt: workflowCompletedAt,
+      completedAt: workflowCompletedAt(jobs),
       jobs,
     }
   })
+}
+
+const toDate = (date: string | null | undefined): Date | undefined => (date == null ? undefined : new Date(date))
+
+const workflowCompletedAt = (jobs: Job[]): Date | undefined => {
+  const completedTimes: number[] = jobs.map((job) => job.completedAt?.getTime()).filter((x): x is number => x != null)
+  if (completedTimes.length === 0) {
+    return
+  }
+  return new Date(Math.max(...completedTimes))
 }
