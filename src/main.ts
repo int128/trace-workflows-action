@@ -20,7 +20,9 @@ const main = async (): Promise<void> => {
       token: core.getInput('token', { required: true }),
     })
   } finally {
-    await sdk.shutdown()
+    await core.group('Shutting down OpenTelemetry', async () => {
+      await sdk.shutdown()
+    })
   }
 }
 
