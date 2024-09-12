@@ -10,6 +10,10 @@ inputs:
     description: GitHub Token
     required: true
     default: ${{ github.token }}
+  enable-oltp:
+    description: Enable OLTP
+    required: true
+    default: 'false'
 
 runs:
   using: 'node20'
