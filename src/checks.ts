@@ -2,6 +2,10 @@ import assert from 'assert'
 import { ListChecksQuery } from './generated/graphql.js'
 import { CheckConclusionState, CheckStatusState } from './generated/graphql-types.js'
 
+export type Filter = {
+  event: string
+}
+
 export type WorkflowEvent = {
   workflowRuns: WorkflowRun[]
   startedAt: Date | undefined
@@ -26,7 +30,7 @@ export type Job = {
   completedAt: Date
 }
 
-export const summaryListChecksQuery = (q: ListChecksQuery): WorkflowEvent => {
+export const summaryListChecksQuery = (q: ListChecksQuery, filter: Filter): WorkflowEvent => {
   assert(q.rateLimit != null)
   assert(q.repository != null)
   assert(q.repository.object != null)
@@ -40,6 +44,9 @@ export const summaryListChecksQuery = (q: ListChecksQuery): WorkflowEvent => {
     assert(checkSuite.workflowRun != null)
     assert(checkSuite.checkRuns != null)
     assert(checkSuite.checkRuns.nodes != null)
+    if (checkSuite.workflowRun.event !== filter.event) {
+      continue
+    }
 
     const jobs: Job[] = []
     for (const checkRun of checkSuite.checkRuns.nodes) {

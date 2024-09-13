@@ -1,9 +1,10 @@
 import { summaryListChecksQuery } from '../src/checks.js'
 import { CheckConclusionState, CheckStatusState } from '../src/generated/graphql-types.js'
+import { ListChecksQuery } from '../src/generated/graphql.js'
 
 describe('summaryListChecksQuery', () => {
   it('should return a summary of workflow runs', () => {
-    const event = summaryListChecksQuery({
+    const query: ListChecksQuery = {
       __typename: 'Query',
       rateLimit: {
         cost: 1,
@@ -53,6 +54,9 @@ describe('summaryListChecksQuery', () => {
           },
         },
       },
+    }
+    const event = summaryListChecksQuery(query, {
+      event: 'push',
     })
     expect(event).toEqual({
       workflowRuns: [
