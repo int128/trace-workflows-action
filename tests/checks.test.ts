@@ -73,7 +73,7 @@ describe('summaryListChecksQuery', () => {
           jobs: [
             {
               name: 'build',
-              url: 'https://github.com/int128/trace-workflows-action/actions/runs/2/jobs/3',
+              url: 'https://github.com/int128/trace-workflows-action/actions/runs/2/job/3',
               status: CheckStatusState.Completed,
               conclusion: CheckConclusionState.Success,
               startedAt: new Date('2021-08-04T00:00:00Z'),

@@ -61,7 +61,7 @@ export const summaryListChecksQuery = (q: ListChecksQuery, filter: Filter): Work
       }
       jobs.push({
         name: checkRun.name,
-        url: `${checkSuite.workflowRun.url}/jobs/${checkRun.databaseId}`,
+        url: `${checkSuite.workflowRun.url}/job/${checkRun.databaseId}`,
         status: checkRun.status,
         conclusion: checkRun.conclusion,
         startedAt: new Date(checkRun.startedAt),
