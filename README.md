@@ -18,9 +18,11 @@ jobs:
 
 ### Inputs
 
-| Name            | Default                                              | Description                                        |
+| Name            | Default value                                        | Description                                        |
 | --------------- | ---------------------------------------------------- | -------------------------------------------------- |
-| `sha`           | `github.event.pull_request.head.sha` or `github.sha` | Target commit SHA                                  |
+| `sha`           | `github.event.pull_request.head.sha` or `github.sha` | Commit SHA to acquire the workflow runs            |
+| `event`         | `github.event_name`                                  | Event name to acquire the workflow runs            |
+| `ref`           | `github.ref`                                         | Ref name set to a span attribute                   |
 | `token`         | `github.token`                                       | GitHub token                                       |
 | `oltp-endpoint` | -                                                    | If set, emit a trace to the OpenTelemetry endpoint |
 

@@ -4,7 +4,7 @@ import { ATTR_DEPLOYMENT_ENVIRONMENT_NAME } from '@opentelemetry/semantic-conven
 import { WorkflowEvent } from './checks.js'
 
 type Context = {
-  eventName: string
+  event: string
   ref: string
   sha: string
 }
@@ -14,7 +14,7 @@ export const emitSpans = (event: WorkflowEvent, context: Context) => {
 
   const tracer = opentelemetry.trace.getTracer('trace-workflows-action')
   tracer.startActiveSpan(
-    `${context.eventName}@${context.ref}`,
+    `${context.event}@${context.ref}`,
     {
       root: true,
       startTime: event.startedAt,
