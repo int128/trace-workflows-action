@@ -1,5 +1,5 @@
-name: typescript-action-with-graphql-codegen
-description: Template of TypeScript Action
+name: trace-workflows-action
+description: Send a trace of GitHub Actions workflows to OpenTelemetry
 
 inputs:
   sha:
@@ -11,7 +11,7 @@ inputs:
     required: true
     default: ${{ github.token }}
   oltp-endpoint:
-    description: If set, export traces. For example, http://localhost:4318/v1/traces
+    description: If set, emit a trace to the OpenTelemetry endpoint
     required: false
 
 runs:
