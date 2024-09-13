@@ -1,4 +1,4 @@
-import { summaryListChecksQuery } from '../src/checks.js'
+import { summaryListChecksQuery, WorkflowEvent } from '../src/checks.js'
 import { CheckConclusionState, CheckStatusState } from '../src/generated/graphql-types.js'
 import { ListChecksQuery } from '../src/generated/graphql.js'
 
@@ -31,6 +31,7 @@ describe('summaryListChecksQuery', () => {
                     __typename: 'Workflow',
                     name: 'CI',
                   },
+                  url: 'https://github.com/int128/trace-workflows-action/actions/runs/2',
                 },
                 createdAt: '2021-08-04T00:00:00Z',
                 status: CheckStatusState.Completed,
@@ -41,6 +42,7 @@ describe('summaryListChecksQuery', () => {
                   nodes: [
                     {
                       __typename: 'CheckRun',
+                      databaseId: 3,
                       name: 'build',
                       status: CheckStatusState.Completed,
                       conclusion: CheckConclusionState.Success,
@@ -58,11 +60,12 @@ describe('summaryListChecksQuery', () => {
     const event = summaryListChecksQuery(query, {
       event: 'push',
     })
-    expect(event).toEqual({
+    expect(event).toEqual<WorkflowEvent>({
       workflowRuns: [
         {
           event: 'push',
           workflowName: 'CI',
+          url: 'https://github.com/int128/trace-workflows-action/actions/runs/2',
           status: CheckStatusState.Completed,
           conclusion: CheckConclusionState.Success,
           createdAt: new Date('2021-08-04T00:00:00Z'),
@@ -70,6 +73,7 @@ describe('summaryListChecksQuery', () => {
           jobs: [
             {
               name: 'build',
+              url: 'https://github.com/int128/trace-workflows-action/actions/runs/2/job/3',
               status: CheckStatusState.Completed,
               conclusion: CheckConclusionState.Success,
               startedAt: new Date('2021-08-04T00:00:00Z'),

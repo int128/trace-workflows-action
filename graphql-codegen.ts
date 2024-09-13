@@ -20,6 +20,7 @@ const config: CodegenConfig = {
     scalars: {
       DateTime: 'string',
       GitObjectID: 'string',
+      URI: 'string',
     },
   },
 }

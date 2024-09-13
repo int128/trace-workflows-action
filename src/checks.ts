@@ -15,6 +15,7 @@ export type WorkflowEvent = {
 export type WorkflowRun = {
   event: string
   workflowName: string
+  url: string
   status: CheckStatusState
   conclusion: CheckConclusionState | null | undefined
   createdAt: Date
@@ -24,6 +25,7 @@ export type WorkflowRun = {
 
 export type Job = {
   name: string
+  url: string
   status: CheckStatusState
   conclusion: CheckConclusionState | null | undefined
   startedAt: Date
@@ -59,6 +61,7 @@ export const summaryListChecksQuery = (q: ListChecksQuery, filter: Filter): Work
       }
       jobs.push({
         name: checkRun.name,
+        url: `${checkSuite.workflowRun.url}/job/${checkRun.databaseId}`,
         status: checkRun.status,
         conclusion: checkRun.conclusion,
         startedAt: new Date(checkRun.startedAt),
@@ -73,6 +76,7 @@ export const summaryListChecksQuery = (q: ListChecksQuery, filter: Filter): Work
     workflowRuns.push({
       event: checkSuite.workflowRun.event,
       workflowName: checkSuite.workflowRun.workflow.name,
+      url: checkSuite.workflowRun.url,
       status: checkSuite.status,
       conclusion: checkSuite.conclusion,
       createdAt: new Date(checkSuite.createdAt),
