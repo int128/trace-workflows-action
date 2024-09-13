@@ -1,16 +1,11 @@
 import * as opentelemetry from '@opentelemetry/api'
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions'
 import { ATTR_DEPLOYMENT_ENVIRONMENT_NAME } from '@opentelemetry/semantic-conventions/incubating'
+import { Context } from './context.js'
 import { WorkflowEvent } from './checks.js'
 
-type Context = {
-  event: string
-  ref: string
-  sha: string
-}
-
 export const emitSpans = (event: WorkflowEvent, context: Context) => {
-  const environmentName = getEnvironmentName(context.ref)
+  const environmentName = getEnvironmentName(context)
 
   const tracer = opentelemetry.trace.getTracer('trace-workflows-action')
   tracer.startActiveSpan(
@@ -68,16 +63,9 @@ export const emitSpans = (event: WorkflowEvent, context: Context) => {
   )
 }
 
-const getEnvironmentName = (ref: string): string => {
-  if (ref.startsWith('refs/heads/')) {
-    return ref.substring('refs/heads/'.length)
+const getEnvironmentName = (context: Context): string => {
+  if (context.pullRequestNumber) {
+    return `pr-${context.pullRequestNumber}`
   }
-  if (ref.startsWith('refs/tags/')) {
-    return ref.substring('refs/tags/'.length)
-  }
-  if (ref.startsWith('refs/pull/')) {
-    const [, , prNumber] = ref.split('/')
-    return `pr-${prNumber}`
-  }
-  return ref
+  return context.ref.replace(/refs\/(heads|tags)\//, '')
 }
