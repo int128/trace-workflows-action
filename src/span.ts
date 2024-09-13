@@ -6,6 +6,10 @@ import { WorkflowEvent } from './checks.js'
 
 export const emitSpans = (event: WorkflowEvent, context: Context) => {
   const environmentName = getEnvironmentName(context)
+  const commonAttributes = {
+    [ATTR_SERVICE_VERSION]: context.sha,
+    [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]: environmentName,
+  }
 
   const tracer = opentelemetry.trace.getTracer('trace-workflows-action')
   tracer.startActiveSpan(
@@ -14,9 +18,8 @@ export const emitSpans = (event: WorkflowEvent, context: Context) => {
       root: true,
       startTime: event.startedAt,
       attributes: {
+        ...commonAttributes,
         [ATTR_SERVICE_NAME]: 'github-actions-event',
-        [ATTR_SERVICE_VERSION]: context.sha,
-        [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]: environmentName,
       },
     },
     (span) => {
@@ -27,9 +30,10 @@ export const emitSpans = (event: WorkflowEvent, context: Context) => {
             {
               startTime: workflowRun.createdAt,
               attributes: {
+                ...commonAttributes,
                 [ATTR_SERVICE_NAME]: 'github-actions-workflow',
-                [ATTR_SERVICE_VERSION]: context.sha,
-                [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]: environmentName,
+                'github.actions.workflow.status': workflowRun.status,
+                'github.actions.workflow.conclusion': String(workflowRun.conclusion),
               },
             },
             (span) => {
@@ -40,9 +44,10 @@ export const emitSpans = (event: WorkflowEvent, context: Context) => {
                     {
                       startTime: job.startedAt,
                       attributes: {
+                        ...commonAttributes,
                         [ATTR_SERVICE_NAME]: 'github-actions-job',
-                        [ATTR_SERVICE_VERSION]: context.sha,
-                        [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]: environmentName,
+                        'github.actions.job.status': job.status,
+                        'github.actions.job.conclusion': String(job.conclusion),
                       },
                     },
                     (span) => {

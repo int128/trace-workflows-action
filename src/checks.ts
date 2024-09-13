@@ -54,6 +54,9 @@ export const summaryListChecksQuery = (q: ListChecksQuery, filter: Filter): Work
       if (checkRun.startedAt == null || checkRun.completedAt == null) {
         continue
       }
+      if (checkRun.conclusion === CheckConclusionState.Skipped) {
+        continue
+      }
       jobs.push({
         name: checkRun.name,
         status: checkRun.status,
