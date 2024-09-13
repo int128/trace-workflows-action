@@ -13,7 +13,6 @@ const main = async (): Promise<void> => {
       url: oltpEndpoint,
     })
   }
-
   const sdk = new NodeSDK({ traceExporter })
   sdk.start()
 
@@ -21,9 +20,6 @@ const main = async (): Promise<void> => {
     await run({
       owner: github.context.repo.owner,
       repo: github.context.repo.repo,
-      sha: core.getInput('sha', { required: true }),
-      event: core.getInput('event', { required: true }),
-      ref: core.getInput('ref', { required: true }),
       token: core.getInput('token', { required: true }),
     })
   } finally {

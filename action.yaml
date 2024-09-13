@@ -2,18 +2,6 @@ name: trace-workflows-action
 description: Send a trace of GitHub Actions workflows to OpenTelemetry
 
 inputs:
-  sha:
-    description: Commit SHA to acquire the workflow runs
-    required: true
-    default: ${{ github.event.pull_request.head.sha || github.sha }}
-  event:
-    description: Event name to acquire the workflow runs
-    required: true
-    default: ${{ github.event_name }}
-  ref:
-    description: Ref name set to a span attribute
-    required: true
-    default: ${{ github.ref }}
   token:
     description: GitHub Token
     required: true
