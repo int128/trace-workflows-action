@@ -3,7 +3,7 @@ import { CheckConclusionState, CheckStatusState } from '../src/generated/graphql
 
 describe('summaryListChecksQuery', () => {
   it('should return a summary of workflow runs', () => {
-    const workflowRuns = summaryListChecksQuery({
+    const event = summaryListChecksQuery({
       __typename: 'Query',
       rateLimit: {
         cost: 1,
@@ -54,24 +54,28 @@ describe('summaryListChecksQuery', () => {
         },
       },
     })
-    expect(workflowRuns).toEqual([
-      {
-        event: 'push',
-        workflowName: 'CI',
-        status: CheckStatusState.Completed,
-        conclusion: CheckConclusionState.Success,
-        createdAt: new Date('2021-08-04T00:00:00Z'),
-        completedAt: new Date('2021-08-04T00:01:00Z'),
-        jobs: [
-          {
-            name: 'build',
-            status: CheckStatusState.Completed,
-            conclusion: CheckConclusionState.Success,
-            startedAt: new Date('2021-08-04T00:00:00Z'),
-            completedAt: new Date('2021-08-04T00:01:00Z'),
-          },
-        ],
-      },
-    ])
+    expect(event).toEqual({
+      workflowRuns: [
+        {
+          event: 'push',
+          workflowName: 'CI',
+          status: CheckStatusState.Completed,
+          conclusion: CheckConclusionState.Success,
+          createdAt: new Date('2021-08-04T00:00:00Z'),
+          completedAt: new Date('2021-08-04T00:01:00Z'),
+          jobs: [
+            {
+              name: 'build',
+              status: CheckStatusState.Completed,
+              conclusion: CheckConclusionState.Success,
+              startedAt: new Date('2021-08-04T00:00:00Z'),
+              completedAt: new Date('2021-08-04T00:01:00Z'),
+            },
+          ],
+        },
+      ],
+      startedAt: new Date('2021-08-04T00:00:00Z'),
+      completedAt: new Date('2021-08-04T00:01:00Z'),
+    })
   })
 })
