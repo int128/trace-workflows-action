@@ -24,7 +24,9 @@ export const run = async (inputs: Inputs): Promise<void> => {
     oid: inputs.sha,
     appId: GITHUB_ACTIONS_APP_ID,
   })
-  const event = summaryListChecksQuery(listChecksQuery)
+  const event = summaryListChecksQuery(listChecksQuery, {
+    event: inputs.event,
+  })
   core.info(`event: ${JSON.stringify(event, undefined, 2)}`)
 
   emitSpans(event, inputs)
