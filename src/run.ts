@@ -10,9 +10,9 @@ const GITHUB_ACTIONS_APP_ID = 15368
 export type Inputs = {
   owner: string
   repo: string
-  eventName: string
-  ref: string
   sha: string
+  event: string
+  ref: string
   token: string
 }
 
