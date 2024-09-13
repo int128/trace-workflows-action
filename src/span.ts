@@ -4,6 +4,7 @@ import {
   ATTR_OTEL_STATUS_CODE,
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,
+  ATTR_URL_FULL,
   OTEL_STATUS_CODE_VALUE_ERROR,
   OTEL_STATUS_CODE_VALUE_OK,
 } from '@opentelemetry/semantic-conventions'
@@ -46,6 +47,7 @@ export const emitSpans = (event: WorkflowEvent, context: Context) => {
                 [ATTR_SERVICE_NAME]: 'github-actions-workflow',
                 [ATTR_OTEL_STATUS_CODE]: getStatusCode(workflowRun.conclusion),
                 [ATTR_ERROR_TYPE]: getErrorType(workflowRun.conclusion),
+                [ATTR_URL_FULL]: workflowRun.url,
               },
             },
             (span) => {
@@ -60,6 +62,7 @@ export const emitSpans = (event: WorkflowEvent, context: Context) => {
                         [ATTR_SERVICE_NAME]: 'github-actions-job',
                         [ATTR_OTEL_STATUS_CODE]: getStatusCode(job.conclusion),
                         [ATTR_ERROR_TYPE]: getErrorType(job.conclusion),
+                        [ATTR_URL_FULL]: job.url,
                       },
                     },
                     (span) => {

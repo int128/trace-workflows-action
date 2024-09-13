@@ -25,6 +25,7 @@ const query = /* GraphQL */ `
                 workflow {
                   name
                 }
+                url
               }
               status
               conclusion
@@ -32,6 +33,7 @@ const query = /* GraphQL */ `
               checkRuns(filterBy: { checkType: LATEST, status: COMPLETED, appId: $appId }, first: 100) {
                 totalCount
                 nodes {
+                  databaseId
                   name
                   status
                   conclusion
