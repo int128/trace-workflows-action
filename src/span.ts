@@ -1,14 +1,26 @@
 import * as opentelemetry from '@opentelemetry/api'
-import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions'
-import { ATTR_DEPLOYMENT_ENVIRONMENT_NAME } from '@opentelemetry/semantic-conventions/incubating'
+import {
+  ATTR_ERROR_TYPE,
+  ATTR_OTEL_STATUS_CODE,
+  ATTR_SERVICE_NAME,
+  ATTR_SERVICE_VERSION,
+  OTEL_STATUS_CODE_VALUE_ERROR,
+  OTEL_STATUS_CODE_VALUE_OK,
+} from '@opentelemetry/semantic-conventions'
+import {
+  ATTR_DEPLOYMENT_ENVIRONMENT,
+  ATTR_DEPLOYMENT_ENVIRONMENT_NAME,
+} from '@opentelemetry/semantic-conventions/incubating'
 import { Context } from './context.js'
 import { WorkflowEvent } from './checks.js'
+import { CheckConclusionState } from './generated/graphql-types.js'
 
 export const emitSpans = (event: WorkflowEvent, context: Context) => {
   const environmentName = getEnvironmentName(context)
   const commonAttributes = {
     [ATTR_SERVICE_VERSION]: context.sha,
     [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]: environmentName,
+    [ATTR_DEPLOYMENT_ENVIRONMENT]: environmentName,
   }
 
   const tracer = opentelemetry.trace.getTracer('trace-workflows-action')
@@ -32,8 +44,8 @@ export const emitSpans = (event: WorkflowEvent, context: Context) => {
               attributes: {
                 ...commonAttributes,
                 [ATTR_SERVICE_NAME]: 'github-actions-workflow',
-                'github.actions.workflow.status': workflowRun.status,
-                'github.actions.workflow.conclusion': String(workflowRun.conclusion),
+                [ATTR_OTEL_STATUS_CODE]: getStatusCode(workflowRun.conclusion),
+                [ATTR_ERROR_TYPE]: getErrorType(workflowRun.conclusion),
               },
             },
             (span) => {
@@ -46,8 +58,8 @@ export const emitSpans = (event: WorkflowEvent, context: Context) => {
                       attributes: {
                         ...commonAttributes,
                         [ATTR_SERVICE_NAME]: 'github-actions-job',
-                        'github.actions.job.status': job.status,
-                        'github.actions.job.conclusion': String(job.conclusion),
+                        [ATTR_OTEL_STATUS_CODE]: getStatusCode(job.conclusion),
+                        [ATTR_ERROR_TYPE]: getErrorType(job.conclusion),
                       },
                     },
                     (span) => {
@@ -73,4 +85,25 @@ const getEnvironmentName = (context: Context): string => {
     return `pr-${context.pullRequestNumber}`
   }
   return context.ref.replace(/refs\/(heads|tags)\//, '')
+}
+
+const getStatusCode = (conclusion: CheckConclusionState | null | undefined) => {
+  switch (conclusion) {
+    case CheckConclusionState.Failure:
+    case CheckConclusionState.StartupFailure:
+    case CheckConclusionState.TimedOut:
+    case CheckConclusionState.Cancelled:
+      return OTEL_STATUS_CODE_VALUE_ERROR
+  }
+  return OTEL_STATUS_CODE_VALUE_OK
+}
+
+const getErrorType = (conclusion: CheckConclusionState | null | undefined) => {
+  switch (conclusion) {
+    case CheckConclusionState.Failure:
+    case CheckConclusionState.StartupFailure:
+    case CheckConclusionState.TimedOut:
+    case CheckConclusionState.Cancelled:
+      return conclusion
+  }
 }
