@@ -1,12 +1,9 @@
 import * as opentelemetry from '@opentelemetry/api'
 import {
   ATTR_ERROR_TYPE,
-  ATTR_OTEL_STATUS_CODE,
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,
   ATTR_URL_FULL,
-  OTEL_STATUS_CODE_VALUE_ERROR,
-  OTEL_STATUS_CODE_VALUE_OK,
 } from '@opentelemetry/semantic-conventions'
 import {
   ATTR_DEPLOYMENT_ENVIRONMENT,
@@ -16,7 +13,7 @@ import { Context } from './context.js'
 import { WorkflowEvent } from './checks.js'
 import { CheckConclusionState } from './generated/graphql-types.js'
 
-export const emitSpans = (event: WorkflowEvent, context: Context) => {
+export const exportSpans = (event: WorkflowEvent, context: Context) => {
   const environmentName = getEnvironmentName(context)
   const commonAttributes = {
     [ATTR_SERVICE_VERSION]: context.sha,
@@ -26,7 +23,7 @@ export const emitSpans = (event: WorkflowEvent, context: Context) => {
 
   const tracer = opentelemetry.trace.getTracer('trace-workflows-action')
   tracer.startActiveSpan(
-    `${context.event}@${context.ref}`,
+    `${context.event}@${context.owner}/${context.repo}:${context.ref}`,
     {
       root: true,
       startTime: event.startedAt,
@@ -45,7 +42,6 @@ export const emitSpans = (event: WorkflowEvent, context: Context) => {
               attributes: {
                 ...commonAttributes,
                 [ATTR_SERVICE_NAME]: 'github-actions-workflow',
-                [ATTR_OTEL_STATUS_CODE]: getStatusCode(workflowRun.conclusion),
                 [ATTR_ERROR_TYPE]: getErrorType(workflowRun.conclusion),
                 [ATTR_URL_FULL]: workflowRun.url,
               },
@@ -60,16 +56,26 @@ export const emitSpans = (event: WorkflowEvent, context: Context) => {
                       attributes: {
                         ...commonAttributes,
                         [ATTR_SERVICE_NAME]: 'github-actions-job',
-                        [ATTR_OTEL_STATUS_CODE]: getStatusCode(job.conclusion),
                         [ATTR_ERROR_TYPE]: getErrorType(job.conclusion),
                         [ATTR_URL_FULL]: job.url,
                       },
                     },
                     (span) => {
-                      span.end(job.completedAt)
+                      try {
+                        span.setStatus({
+                          code: getStatusCode(job.conclusion),
+                          message: job.conclusion || undefined,
+                        })
+                      } finally {
+                        span.end(job.completedAt)
+                      }
                     },
                   )
                 }
+                span.setStatus({
+                  code: getStatusCode(workflowRun.conclusion),
+                  message: workflowRun.conclusion || undefined,
+                })
               } finally {
                 span.end(workflowRun.completedAt)
               }
@@ -96,9 +102,9 @@ const getStatusCode = (conclusion: CheckConclusionState | null | undefined) => {
     case CheckConclusionState.StartupFailure:
     case CheckConclusionState.TimedOut:
     case CheckConclusionState.Cancelled:
-      return OTEL_STATUS_CODE_VALUE_ERROR
+      return opentelemetry.SpanStatusCode.ERROR
   }
-  return OTEL_STATUS_CODE_VALUE_OK
+  return opentelemetry.SpanStatusCode.OK
 }
 
 const getErrorType = (conclusion: CheckConclusionState | null | undefined) => {
