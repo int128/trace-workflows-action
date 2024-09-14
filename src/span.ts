@@ -8,28 +8,31 @@ import {
 import {
   ATTR_DEPLOYMENT_ENVIRONMENT,
   ATTR_DEPLOYMENT_ENVIRONMENT_NAME,
+  ATTR_USER_NAME,
 } from '@opentelemetry/semantic-conventions/incubating'
 import { Context } from './context.js'
 import { WorkflowEvent } from './checks.js'
 import { CheckConclusionState } from './generated/graphql-types.js'
 
 export const exportSpans = (event: WorkflowEvent, context: Context) => {
+  const tracer = opentelemetry.trace.getTracer('trace-workflows-action')
   const environmentName = getEnvironmentName(context)
   const commonAttributes = {
     [ATTR_SERVICE_VERSION]: context.sha,
     [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]: environmentName,
     [ATTR_DEPLOYMENT_ENVIRONMENT]: environmentName,
+    [ATTR_USER_NAME]: context.actor,
   }
 
-  const tracer = opentelemetry.trace.getTracer('trace-workflows-action')
   tracer.startActiveSpan(
-    `${context.event}@${context.owner}/${context.repo}:${context.ref}`,
+    `${context.owner}/${context.repo}:${context.event}:${context.ref}`,
     {
       root: true,
       startTime: event.startedAt,
       attributes: {
         ...commonAttributes,
         [ATTR_SERVICE_NAME]: 'github-actions-event',
+        [ATTR_URL_FULL]: getEventURL(context),
       },
     },
     (span) => {
@@ -94,6 +97,13 @@ const getEnvironmentName = (context: Context): string => {
     return `pr-${context.pullRequestNumber}`
   }
   return context.ref.replace(/refs\/(heads|tags)\//, '')
+}
+
+const getEventURL = (context: Context): string => {
+  if (context.pullRequestNumber) {
+    return `${context.serverUrl}/${context.owner}/${context.repo}/pull/${context.pullRequestNumber}`
+  }
+  return `${context.serverUrl}/${context.owner}/${context.repo}/tree/${context.ref}`
 }
 
 const getStatusCode = (conclusion: CheckConclusionState | null | undefined) => {
