@@ -7,6 +7,8 @@ export type Context = {
   ref: string
   sha: string
   pullRequestNumber?: number
+  actor: string
+  serverUrl: string
 }
 
 type WorkflowRunEventPayload = {
@@ -30,12 +32,18 @@ type PullRequestEventPayload = {
 }
 
 export const getContext = (): Context => {
+  const context = {
+    owner: github.context.repo.owner,
+    repo: github.context.repo.repo,
+    serverUrl: github.context.serverUrl,
+    actor: github.context.actor,
+  }
+
   if (github.context.eventName === 'workflow_run') {
     const payload = github.context.payload as WorkflowRunEventPayload
     if (payload.workflow_run.pull_requests.length > 0) {
       return {
-        owner: github.context.repo.owner,
-        repo: github.context.repo.repo,
+        ...context,
         event: payload.workflow_run.event,
         ref: payload.workflow_run.head_branch,
         sha: payload.workflow_run.head_sha,
@@ -43,8 +51,7 @@ export const getContext = (): Context => {
       }
     }
     return {
-      owner: github.context.repo.owner,
-      repo: github.context.repo.repo,
+      ...context,
       event: payload.workflow_run.event,
       ref: payload.workflow_run.head_branch,
       sha: payload.workflow_run.head_sha,
@@ -54,8 +61,7 @@ export const getContext = (): Context => {
   if (github.context.eventName === 'pull_request') {
     const payload = github.context.payload as PullRequestEventPayload
     return {
-      owner: github.context.repo.owner,
-      repo: github.context.repo.repo,
+      ...context,
       event: github.context.eventName,
       ref: payload.pull_request.head.ref,
       sha: payload.pull_request.head.sha,
@@ -64,8 +70,7 @@ export const getContext = (): Context => {
   }
 
   return {
-    owner: github.context.repo.owner,
-    repo: github.context.repo.repo,
+    ...context,
     event: github.context.eventName,
     ref: github.context.ref,
     sha: github.context.sha,
