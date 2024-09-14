@@ -1,5 +1,4 @@
 import * as core from '@actions/core'
-import * as github from '@actions/github'
 import { run } from './run.js'
 import { NodeSDK } from '@opentelemetry/sdk-node'
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto'
@@ -18,8 +17,6 @@ const main = async (): Promise<void> => {
 
   try {
     await run({
-      owner: github.context.repo.owner,
-      repo: github.context.repo.repo,
       token: core.getInput('token', { required: true }),
     })
   } finally {
