@@ -5,6 +5,8 @@ export type ListChecksQueryVariables = Types.Exact<{
   name: Types.Scalars['String']['input'];
   oid: Types.Scalars['GitObjectID']['input'];
   appId: Types.Scalars['Int']['input'];
+  perCheckSuite: Types.Scalars['Int']['input'];
+  perCheckRun: Types.Scalars['Int']['input'];
   afterCheckSuite?: Types.InputMaybe<Types.Scalars['String']['input']>;
   afterCheckRun?: Types.InputMaybe<Types.Scalars['String']['input']>;
 }>;

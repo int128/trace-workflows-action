@@ -23,6 +23,8 @@ export const run = async (inputs: Inputs): Promise<void> => {
     // For a pull request, this must be the head SHA instead of the merge commit SHA.
     oid: context.sha,
     appId: GITHUB_ACTIONS_APP_ID,
+    perCheckSuite: 1,
+    perCheckRun: 1,
   })
   const event = summaryListChecksQuery(listChecksQuery, {
     event: context.event,

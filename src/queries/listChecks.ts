@@ -9,6 +9,8 @@ const query = /* GraphQL */ `
     $name: String!
     $oid: GitObjectID!
     $appId: Int!
+    $perCheckSuite: Int!
+    $perCheckRun: Int!
     $afterCheckSuite: String
     $afterCheckRun: String
   ) {
@@ -20,7 +22,7 @@ const query = /* GraphQL */ `
       object(oid: $oid) {
         __typename
         ... on Commit {
-          checkSuites(filterBy: { appId: $appId }, first: 100, after: $afterCheckSuite) {
+          checkSuites(filterBy: { appId: $appId }, first: $perCheckSuite, after: $afterCheckSuite) {
             totalCount
             pageInfo {
               hasNextPage
@@ -39,7 +41,7 @@ const query = /* GraphQL */ `
               createdAt
               checkRuns(
                 filterBy: { checkType: LATEST, status: COMPLETED, appId: $appId }
-                first: 100
+                first: $perCheckRun
                 after: $afterCheckRun
               ) {
                 totalCount
