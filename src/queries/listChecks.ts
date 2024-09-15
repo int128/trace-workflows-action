@@ -4,7 +4,14 @@ import { ListChecksQuery, ListChecksQueryVariables } from '../generated/graphql.
 import { Octokit } from '../github.js'
 
 const query = /* GraphQL */ `
-  query listChecks($owner: String!, $name: String!, $oid: GitObjectID!, $appId: Int!, $afterCheckSuite: String) {
+  query listChecks(
+    $owner: String!
+    $name: String!
+    $oid: GitObjectID!
+    $appId: Int!
+    $afterCheckSuite: String
+    $afterCheckRun: String
+  ) {
     rateLimit {
       cost
       remaining
@@ -30,7 +37,11 @@ const query = /* GraphQL */ `
               status
               conclusion
               createdAt
-              checkRuns(filterBy: { checkType: LATEST, status: COMPLETED, appId: $appId }, first: 100) {
+              checkRuns(
+                filterBy: { checkType: LATEST, status: COMPLETED, appId: $appId }
+                first: 100
+                after: $afterCheckRun
+              ) {
                 totalCount
                 pageInfo {
                   hasNextPage
@@ -55,7 +66,28 @@ const query = /* GraphQL */ `
 
 export const getListChecksQuery = async (octokit: Octokit, v: ListChecksQueryVariables): Promise<ListChecksQuery> => {
   const fn = createQueryFunction(octokit)
-  return await paginateCheckSuites(fn, v)
+  const q = await fn(v)
+
+  assert(q.repository != null)
+  assert(q.repository.object != null)
+  assert.strictEqual(q.repository.object.__typename, 'Commit')
+  assert(q.repository.object.checkSuites != null)
+  q.repository.object.checkSuites = await paginateCheckSuites(fn, v, getCheckSuites(q))
+
+  assert(q.repository.object.checkSuites.nodes != null)
+  for (const [checkSuiteIndex] of q.repository.object.checkSuites.nodes.entries()) {
+    const checkRuns = getCheckRuns(q, checkSuiteIndex)
+    assert(q.repository.object.checkSuites.nodes != null)
+    assert(q.repository.object.checkSuites.nodes[checkSuiteIndex] != null)
+    q.repository.object.checkSuites.nodes[checkSuiteIndex].checkRuns = await paginateCheckRuns(
+      fn,
+      v,
+      checkSuiteIndex,
+      checkRuns,
+    )
+  }
+
+  return q
 }
 
 type QueryFunction = (v: ListChecksQueryVariables) => Promise<ListChecksQuery>
@@ -72,31 +104,73 @@ const createQueryFunction =
 const paginateCheckSuites = async (
   fn: QueryFunction,
   v: ListChecksQueryVariables,
-  previous?: ListChecksQuery,
-): Promise<ListChecksQuery> => {
-  const q = await fn(v)
+  cumulativeCheckSuites: CheckSuites,
+): Promise<CheckSuites> => {
+  assert(cumulativeCheckSuites.nodes != null)
+  core.info(`CheckSuites: ${cumulativeCheckSuites.nodes.length} / ${cumulativeCheckSuites.totalCount}`)
+  if (!cumulativeCheckSuites.pageInfo.hasNextPage) {
+    return cumulativeCheckSuites
+  }
+
+  const nextQuery = await fn({
+    ...v,
+    afterCheckSuite: cumulativeCheckSuites.pageInfo.endCursor,
+  })
+  const nextCheckSuites = getCheckSuites(nextQuery)
+  assert(nextCheckSuites.nodes != null)
+  assert(cumulativeCheckSuites.nodes != null)
+  return await paginateCheckSuites(fn, v, {
+    ...nextCheckSuites,
+    nodes: [...cumulativeCheckSuites.nodes, ...nextCheckSuites.nodes],
+  })
+}
+
+type CheckSuites = ReturnType<typeof getCheckSuites>
+
+const getCheckSuites = (q: ListChecksQuery) => {
   assert(q.repository != null)
   assert(q.repository.object != null)
   assert.strictEqual(q.repository.object.__typename, 'Commit')
   assert(q.repository.object.checkSuites != null)
   assert(q.repository.object.checkSuites.nodes != null)
+  return q.repository.object.checkSuites
+}
 
-  if (previous !== undefined) {
-    assert(previous.repository != null)
-    assert(previous.repository.object != null)
-    assert.strictEqual(previous.repository.object.__typename, 'Commit')
-    assert(previous.repository.object.checkSuites != null)
-    assert(previous.repository.object.checkSuites.nodes != null)
-    q.repository.object.checkSuites.nodes.unshift(...previous.repository.object.checkSuites.nodes)
+const paginateCheckRuns = async (
+  fn: QueryFunction,
+  v: ListChecksQueryVariables,
+  checkSuiteIndex: number,
+  cumulativeCheckRuns: CheckRuns,
+): Promise<CheckRuns> => {
+  assert(cumulativeCheckRuns.nodes != null)
+  core.info(`CheckRuns: ${cumulativeCheckRuns.nodes.length} / ${cumulativeCheckRuns.totalCount}`)
+  if (!cumulativeCheckRuns.pageInfo.hasNextPage) {
+    return cumulativeCheckRuns
   }
 
-  core.info(
-    `CheckSuites: ${q.repository.object.checkSuites.nodes.length} / ${q.repository.object.checkSuites.totalCount}`,
-  )
+  const nextQuery = await fn({
+    ...v,
+    afterCheckRun: cumulativeCheckRuns.pageInfo.endCursor,
+  })
+  const nextCheckRuns = getCheckRuns(nextQuery, checkSuiteIndex)
+  assert(nextCheckRuns.nodes != null)
+  assert(cumulativeCheckRuns.nodes != null)
+  return await paginateCheckRuns(fn, v, checkSuiteIndex, {
+    ...nextCheckRuns,
+    nodes: [...cumulativeCheckRuns.nodes, ...nextCheckRuns.nodes],
+  })
+}
 
-  if (!q.repository.object.checkSuites.pageInfo.hasNextPage) {
-    return q
-  }
-  const afterCheckSuite = q.repository.object.checkSuites.pageInfo.endCursor
-  return await paginateCheckSuites(fn, { ...v, afterCheckSuite }, q)
+type CheckRuns = ReturnType<typeof getCheckRuns>
+
+const getCheckRuns = (q: ListChecksQuery, checkSuiteIndex: number) => {
+  assert(q.repository != null)
+  assert(q.repository.object != null)
+  assert.strictEqual(q.repository.object.__typename, 'Commit')
+  assert(q.repository.object.checkSuites != null)
+  assert(q.repository.object.checkSuites.nodes != null)
+  assert(q.repository.object.checkSuites.nodes[checkSuiteIndex] != null)
+  assert(q.repository.object.checkSuites.nodes[checkSuiteIndex].checkRuns != null)
+  assert(q.repository.object.checkSuites.nodes[checkSuiteIndex].checkRuns.nodes != null)
+  return q.repository.object.checkSuites.nodes[checkSuiteIndex].checkRuns
 }
