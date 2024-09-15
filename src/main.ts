@@ -10,6 +10,8 @@ const main = async () =>
     async () => {
       await run({
         token: core.getInput('token', { required: true }),
+        pageSizeOfCheckSuites: parseInt(core.getInput('page-size-of-check-suites', { required: true })),
+        pageSizeOfCheckRuns: parseInt(core.getInput('page-size-of-check-runs', { required: true })),
       })
     },
   )

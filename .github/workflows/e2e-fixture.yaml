@@ -1,4 +1,4 @@
-name: fixture
+name: e2e-fixture
 
 on:
   pull_request:

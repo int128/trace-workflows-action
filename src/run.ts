@@ -9,6 +9,8 @@ import { getListChecksQuery } from './queries/listChecks.js'
 const GITHUB_ACTIONS_APP_ID = 15368
 
 export type Inputs = {
+  pageSizeOfCheckSuites: number
+  pageSizeOfCheckRuns: number
   token: string
 }
 
@@ -23,8 +25,8 @@ export const run = async (inputs: Inputs): Promise<void> => {
     // For a pull request, this must be the head SHA instead of the merge commit SHA.
     oid: context.sha,
     appId: GITHUB_ACTIONS_APP_ID,
-    perCheckSuite: 1,
-    perCheckRun: 1,
+    firstCheckSuite: inputs.pageSizeOfCheckSuites,
+    firstCheckRun: inputs.pageSizeOfCheckRuns,
   })
   const event = summaryListChecksQuery(listChecksQuery, {
     event: context.event,
