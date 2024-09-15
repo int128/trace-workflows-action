@@ -1,9 +1,9 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
-import * as listChecks from './queries/listChecks.js'
 import { summaryListChecksQuery } from './checks.js'
 import { exportSpans } from './span.js'
 import { getContext } from './context.js'
+import { getListChecksQuery } from './queries/listChecks.js'
 
 // https://api.github.com/apps/github-actions
 const GITHUB_ACTIONS_APP_ID = 15368
@@ -17,7 +17,7 @@ export const run = async (inputs: Inputs): Promise<void> => {
   core.info(`Current context: ${JSON.stringify(context, undefined, 2)}`)
 
   const octokit = github.getOctokit(inputs.token)
-  const listChecksQuery = await listChecks.paginate(listChecks.withOctokit(octokit), {
+  const listChecksQuery = await getListChecksQuery(octokit, {
     owner: context.owner,
     name: context.repo,
     // For a pull request, this must be the head SHA instead of the merge commit SHA.

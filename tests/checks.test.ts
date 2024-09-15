@@ -38,6 +38,10 @@ describe('summaryListChecksQuery', () => {
                 conclusion: CheckConclusionState.Success,
                 checkRuns: {
                   __typename: 'CheckRunConnection',
+                  pageInfo: {
+                    endCursor: 'cursor',
+                    hasNextPage: false,
+                  },
                   totalCount: 1,
                   nodes: [
                     {
