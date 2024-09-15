@@ -68,23 +68,18 @@ export const getListChecksQuery = async (octokit: Octokit, v: ListChecksQueryVar
   const fn = createQueryFunction(octokit)
   const q = await fn(v)
 
+  // Fetch all check suites
   assert(q.repository != null)
   assert(q.repository.object != null)
   assert.strictEqual(q.repository.object.__typename, 'Commit')
   assert(q.repository.object.checkSuites != null)
   q.repository.object.checkSuites = await paginateCheckSuites(fn, v, getCheckSuites(q))
 
+  // Fetch all check runs
   assert(q.repository.object.checkSuites.nodes != null)
-  for (const [checkSuiteIndex] of q.repository.object.checkSuites.nodes.entries()) {
-    const checkRuns = getCheckRuns(q, checkSuiteIndex)
-    assert(q.repository.object.checkSuites.nodes != null)
-    assert(q.repository.object.checkSuites.nodes[checkSuiteIndex] != null)
-    q.repository.object.checkSuites.nodes[checkSuiteIndex].checkRuns = await paginateCheckRuns(
-      fn,
-      v,
-      checkSuiteIndex,
-      checkRuns,
-    )
+  for (const [checkSuiteIndex, checkSuite] of q.repository.object.checkSuites.nodes.entries()) {
+    assert(checkSuite != null)
+    checkSuite.checkRuns = await paginateCheckRuns(fn, v, checkSuiteIndex, getCheckRuns(q, checkSuiteIndex))
   }
 
   return q
