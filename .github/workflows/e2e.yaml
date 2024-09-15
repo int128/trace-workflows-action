@@ -28,4 +28,4 @@ jobs:
             core.info(`ref=${context.ref}`)
             core.info(`actor=${context.actor}`)
             core.info(`payload=${JSON.stringify(context.payload, undefined, 2)}`)
-      - uses: int128/trace-workflows-action@8451edec1b0fe3c412849d7a242ba5ed90991b32 # v0.16.0
+      - uses: int128/trace-workflows-action@36d32709db0ad3b03d1818c0760bbd3bf3c89b77 # v0.17.0
