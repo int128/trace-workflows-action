@@ -31,6 +31,8 @@ export const run = async (inputs: Inputs): Promise<void> => {
   const event = summaryListChecksQuery(listChecksQuery, {
     event: context.event,
   })
-  core.info(`Event: ${JSON.stringify(event, undefined, 2)}`)
+  core.startGroup('Event')
+  core.info(JSON.stringify(event, undefined, 2))
+  core.endGroup()
   exportSpans(event, context)
 }

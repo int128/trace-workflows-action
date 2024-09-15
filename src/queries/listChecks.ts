@@ -70,14 +70,14 @@ export const getListChecksQuery = async (octokit: Octokit, v: ListChecksQueryVar
   const fn = createQueryFunction(octokit)
   const q = await fn(v)
 
-  // Fetch all check suites
+  core.info(`Fetching all check suites`)
   assert(q.repository != null)
   assert(q.repository.object != null)
   assert.strictEqual(q.repository.object.__typename, 'Commit')
   assert(q.repository.object.checkSuites != null)
   q.repository.object.checkSuites = await paginateCheckSuites(fn, v, getCheckSuites(q))
 
-  // Fetch all check runs
+  core.info(`Fetching all check runs`)
   assert(q.repository.object.checkSuites.nodes != null)
   for (const [checkSuiteIndex, checkSuite] of q.repository.object.checkSuites.nodes.entries()) {
     assert(checkSuite != null)
@@ -94,6 +94,9 @@ const createQueryFunction =
   async (v: ListChecksQueryVariables): Promise<ListChecksQuery> =>
     core.group(`ListChecksQuery(${JSON.stringify(v)})`, async () => {
       const q: ListChecksQuery = await octokit.graphql(query, v)
+      assert(q.rateLimit != null)
+      core.info(`rateLimit.cost: ${q.rateLimit.cost}`)
+      core.info(`rateLimit.remaining: ${q.rateLimit.remaining}`)
       core.debug(JSON.stringify(q, undefined, 2))
       return q
     })
@@ -104,7 +107,7 @@ const paginateCheckSuites = async (
   cumulativeCheckSuites: CheckSuites,
 ): Promise<CheckSuites> => {
   assert(cumulativeCheckSuites.nodes != null)
-  core.info(`CheckSuites: ${cumulativeCheckSuites.nodes.length} / ${cumulativeCheckSuites.totalCount}`)
+  core.info(`Fetched ${cumulativeCheckSuites.nodes.length} of ${cumulativeCheckSuites.totalCount} check suites`)
   if (!cumulativeCheckSuites.pageInfo.hasNextPage) {
     return cumulativeCheckSuites
   }
@@ -139,7 +142,7 @@ const paginateCheckRuns = async (
   cumulativeCheckRuns: CheckRuns,
 ): Promise<CheckRuns> => {
   assert(cumulativeCheckRuns.nodes != null)
-  core.info(`CheckRuns: ${cumulativeCheckRuns.nodes.length} / ${cumulativeCheckRuns.totalCount}`)
+  core.info(`Fetched ${cumulativeCheckRuns.nodes.length} of ${cumulativeCheckRuns.totalCount} check runs`)
   if (!cumulativeCheckRuns.pageInfo.hasNextPage) {
     return cumulativeCheckRuns
   }
