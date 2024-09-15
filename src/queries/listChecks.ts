@@ -113,7 +113,6 @@ const paginateCheckSuites = async (
   })
   const nextCheckSuites = getCheckSuites(nextQuery)
   assert(nextCheckSuites.nodes != null)
-  assert(cumulativeCheckSuites.nodes != null)
   return await paginateCheckSuites(fn, v, {
     ...nextCheckSuites,
     nodes: [...cumulativeCheckSuites.nodes, ...nextCheckSuites.nodes],
@@ -149,7 +148,6 @@ const paginateCheckRuns = async (
   })
   const nextCheckRuns = getCheckRuns(nextQuery, checkSuiteIndex)
   assert(nextCheckRuns.nodes != null)
-  assert(cumulativeCheckRuns.nodes != null)
   return await paginateCheckRuns(fn, v, checkSuiteIndex, {
     ...nextCheckRuns,
     nodes: [...cumulativeCheckRuns.nodes, ...nextCheckRuns.nodes],
