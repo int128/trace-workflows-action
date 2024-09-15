@@ -1,4 +1,4 @@
-name: e2e-fixture
+name: e2e-fixture-1
 
 on:
   pull_request:
@@ -10,6 +10,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        id: [1, 2, 3, 4, 5]
+        id: [1, 2, 3]
     steps:
       - run: date
