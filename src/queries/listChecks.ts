@@ -28,34 +28,40 @@ const query = /* GraphQL */ `
               hasNextPage
               endCursor
             }
-            nodes {
-              workflowRun {
-                event
-                workflow {
-                  name
+            edges {
+              cursor
+              node {
+                workflowRun {
+                  event
+                  workflow {
+                    name
+                  }
+                  url
                 }
-                url
-              }
-              status
-              conclusion
-              createdAt
-              checkRuns(
-                filterBy: { checkType: LATEST, status: COMPLETED, appId: $appId }
-                first: $firstCheckRun
-                after: $afterCheckRun
-              ) {
-                totalCount
-                pageInfo {
-                  hasNextPage
-                  endCursor
-                }
-                nodes {
-                  databaseId
-                  name
-                  status
-                  conclusion
-                  startedAt
-                  completedAt
+                status
+                conclusion
+                createdAt
+                checkRuns(
+                  filterBy: { checkType: LATEST, status: COMPLETED, appId: $appId }
+                  first: $firstCheckRun
+                  after: $afterCheckRun
+                ) {
+                  totalCount
+                  pageInfo {
+                    hasNextPage
+                    endCursor
+                  }
+                  edges {
+                    cursor
+                    node {
+                      databaseId
+                      name
+                      status
+                      conclusion
+                      startedAt
+                      completedAt
+                    }
+                  }
                 }
               }
             }
@@ -78,12 +84,12 @@ export const getListChecksQuery = async (octokit: Octokit, v: ListChecksQueryVar
   q.repository.object.checkSuites = await paginateCheckSuites(fn, v, getCheckSuites(q))
 
   core.info(`Fetching all check runs`)
-  assert(q.repository.object.checkSuites.nodes != null)
-  for (const [checkSuiteIndex, checkSuite] of q.repository.object.checkSuites.nodes.entries()) {
-    assert(checkSuite != null)
-    checkSuite.checkRuns = await paginateCheckRuns(fn, v, checkSuiteIndex, getCheckRuns(q, checkSuiteIndex))
+  assert(q.repository.object.checkSuites.edges != null)
+  for (const edge of q.repository.object.checkSuites.edges) {
+    assert(edge != null)
+    assert(edge.node != null)
+    edge.node.checkRuns = await paginateCheckRuns(fn, v, edge.cursor, getCheckRuns(q, edge.cursor))
   }
-
   return q
 }
 
@@ -106,8 +112,8 @@ const paginateCheckSuites = async (
   v: ListChecksQueryVariables,
   cumulativeCheckSuites: CheckSuites,
 ): Promise<CheckSuites> => {
-  assert(cumulativeCheckSuites.nodes != null)
-  core.info(`Fetched ${cumulativeCheckSuites.nodes.length} of ${cumulativeCheckSuites.totalCount} check suites`)
+  assert(cumulativeCheckSuites.edges != null)
+  core.info(`Fetched ${cumulativeCheckSuites.edges.length} of ${cumulativeCheckSuites.totalCount} check suites`)
   if (!cumulativeCheckSuites.pageInfo.hasNextPage) {
     return cumulativeCheckSuites
   }
@@ -117,10 +123,10 @@ const paginateCheckSuites = async (
     afterCheckSuite: cumulativeCheckSuites.pageInfo.endCursor,
   })
   const nextCheckSuites = getCheckSuites(nextQuery)
-  assert(nextCheckSuites.nodes != null)
+  assert(nextCheckSuites.edges != null)
   return await paginateCheckSuites(fn, v, {
     ...nextCheckSuites,
-    nodes: [...cumulativeCheckSuites.nodes, ...nextCheckSuites.nodes],
+    edges: [...cumulativeCheckSuites.edges, ...nextCheckSuites.edges],
   })
 }
 
@@ -131,44 +137,52 @@ const getCheckSuites = (q: ListChecksQuery) => {
   assert(q.repository.object != null)
   assert.strictEqual(q.repository.object.__typename, 'Commit')
   assert(q.repository.object.checkSuites != null)
-  assert(q.repository.object.checkSuites.nodes != null)
   return q.repository.object.checkSuites
 }
 
 const paginateCheckRuns = async (
   fn: QueryFunction,
   v: ListChecksQueryVariables,
-  checkSuiteIndex: number,
+  checkSuiteCursor: string,
   cumulativeCheckRuns: CheckRuns,
 ): Promise<CheckRuns> => {
-  assert(cumulativeCheckRuns.nodes != null)
-  core.info(`Fetched ${cumulativeCheckRuns.nodes.length} of ${cumulativeCheckRuns.totalCount} check runs`)
+  assert(cumulativeCheckRuns.edges != null)
+  core.info(`Fetched ${cumulativeCheckRuns.edges.length} of ${cumulativeCheckRuns.totalCount} check runs`)
   if (!cumulativeCheckRuns.pageInfo.hasNextPage) {
     return cumulativeCheckRuns
   }
 
   const nextQuery = await fn({
     ...v,
+    // Fetch the check runs of the specified check suite
+    firstCheckSuite: 1,
+    afterCheckSuite: checkSuiteCursor,
+    firstCheckRun: 100,
     afterCheckRun: cumulativeCheckRuns.pageInfo.endCursor,
   })
-  const nextCheckRuns = getCheckRuns(nextQuery, checkSuiteIndex)
-  assert(nextCheckRuns.nodes != null)
-  return await paginateCheckRuns(fn, v, checkSuiteIndex, {
+  const nextCheckRuns = getCheckRuns(nextQuery, checkSuiteCursor)
+  assert(nextCheckRuns.edges != null)
+  return await paginateCheckRuns(fn, v, checkSuiteCursor, {
     ...nextCheckRuns,
-    nodes: [...cumulativeCheckRuns.nodes, ...nextCheckRuns.nodes],
+    edges: [...cumulativeCheckRuns.edges, ...nextCheckRuns.edges],
   })
 }
 
 type CheckRuns = ReturnType<typeof getCheckRuns>
 
-const getCheckRuns = (q: ListChecksQuery, checkSuiteIndex: number) => {
+const getCheckRuns = (q: ListChecksQuery, checkSuiteCursor: string) => {
   assert(q.repository != null)
   assert(q.repository.object != null)
   assert.strictEqual(q.repository.object.__typename, 'Commit')
   assert(q.repository.object.checkSuites != null)
-  assert(q.repository.object.checkSuites.nodes != null)
-  assert(q.repository.object.checkSuites.nodes[checkSuiteIndex] != null)
-  assert(q.repository.object.checkSuites.nodes[checkSuiteIndex].checkRuns != null)
-  assert(q.repository.object.checkSuites.nodes[checkSuiteIndex].checkRuns.nodes != null)
-  return q.repository.object.checkSuites.nodes[checkSuiteIndex].checkRuns
+  assert(q.repository.object.checkSuites.edges != null)
+  for (const edge of q.repository.object.checkSuites.edges) {
+    assert(edge != null)
+    if (edge.cursor === checkSuiteCursor) {
+      assert(edge.node != null)
+      assert(edge.node.checkRuns != null)
+      return edge.node.checkRuns
+    }
+  }
+  throw new Error(`internal error: no such CheckSuite cursor ${checkSuiteCursor}`)
 }
