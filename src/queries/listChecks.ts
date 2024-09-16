@@ -74,23 +74,10 @@ const query = /* GraphQL */ `
 
 export const getListChecksQuery = async (octokit: Octokit, v: ListChecksQueryVariables): Promise<ListChecksQuery> => {
   const fn = createQueryFunction(octokit)
-  const q = await fn(v)
-
   core.info(`Fetching all check suites`)
-  assert(q.repository != null)
-  assert(q.repository.object != null)
-  assert.strictEqual(q.repository.object.__typename, 'Commit')
-  assert(q.repository.object.checkSuites != null)
-  q.repository.object.checkSuites = await paginateCheckSuites(fn, v, q.repository.object.checkSuites)
-
+  const q = await fetchAllCheckSuites(fn, v)
   core.info(`Fetching all check runs`)
-  assert(q.repository.object.checkSuites.edges != null)
-  for (const checkSuiteEdge of q.repository.object.checkSuites.edges) {
-    assert(checkSuiteEdge != null)
-    assert(checkSuiteEdge.node != null)
-    assert(checkSuiteEdge.node.checkRuns != null)
-    checkSuiteEdge.node.checkRuns = await paginateCheckRuns(fn, v, checkSuiteEdge.cursor, checkSuiteEdge.node.checkRuns)
-  }
+  await fetchAllCheckRunsOfCheckSuites(fn, v, q)
   return q
 }
 
@@ -107,6 +94,16 @@ const createQueryFunction =
       core.debug(JSON.stringify(q, undefined, 2))
       return q
     })
+
+const fetchAllCheckSuites = async (fn: QueryFunction, v: ListChecksQueryVariables): Promise<ListChecksQuery> => {
+  const q = await fn(v)
+  assert(q.repository != null)
+  assert(q.repository.object != null)
+  assert.strictEqual(q.repository.object.__typename, 'Commit')
+  assert(q.repository.object.checkSuites != null)
+  q.repository.object.checkSuites = await paginateCheckSuites(fn, v, q.repository.object.checkSuites)
+  return q
+}
 
 const paginateCheckSuites = async (
   fn: QueryFunction,
@@ -141,10 +138,32 @@ const getCheckSuites = (q: ListChecksQuery) => {
   return q.repository.object.checkSuites
 }
 
+const fetchAllCheckRunsOfCheckSuites = async (fn: QueryFunction, v: ListChecksQueryVariables, q: ListChecksQuery) => {
+  const checkSuites = getCheckSuites(q)
+  assert(checkSuites.edges != null)
+
+  function* checkSuiteGenerator() {
+    assert(checkSuites.edges != null)
+    for (let i = 1; i < checkSuites.edges.length; i++) {
+      const previous = checkSuites.edges[i - 1]
+      const current = checkSuites.edges[i]
+      assert(previous != null)
+      assert(current != null)
+      yield [previous, current]
+    }
+  }
+  for (const [previous, current] of checkSuiteGenerator()) {
+    assert(current.node != null)
+    assert(current.node.checkRuns != null)
+    current.node.checkRuns = await paginateCheckRuns(fn, v, previous.cursor, current.cursor, current.node.checkRuns)
+  }
+}
+
 const paginateCheckRuns = async (
   fn: QueryFunction,
   v: ListChecksQueryVariables,
-  checkSuiteCursor: string,
+  previousCheckSuiteCursor: string,
+  currentCheckSuiteCursor: string,
   cumulativeCheckRuns: CheckRuns,
 ): Promise<CheckRuns> => {
   assert(cumulativeCheckRuns.edges != null)
@@ -155,15 +174,15 @@ const paginateCheckRuns = async (
 
   const nextQuery = await fn({
     ...v,
-    // Fetch the check runs of the specified check suite
+    // Fetch the current check suite, that is, the first one after the previous check suite
     firstCheckSuite: 1,
-    afterCheckSuite: checkSuiteCursor,
+    afterCheckSuite: previousCheckSuiteCursor,
     firstCheckRun: 100,
     afterCheckRun: cumulativeCheckRuns.pageInfo.endCursor,
   })
-  const nextCheckRuns = getCheckRuns(nextQuery, checkSuiteCursor)
+  const nextCheckRuns = getCheckRuns(nextQuery, currentCheckSuiteCursor)
   assert(nextCheckRuns.edges != null)
-  return await paginateCheckRuns(fn, v, checkSuiteCursor, {
+  return await paginateCheckRuns(fn, v, previousCheckSuiteCursor, currentCheckSuiteCursor, {
     ...nextCheckRuns,
     edges: [...cumulativeCheckRuns.edges, ...nextCheckRuns.edges],
   })
