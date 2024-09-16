@@ -38,20 +38,24 @@ export const summaryListChecksQuery = (q: ListChecksQuery, filter: Filter): Work
   assert(q.repository.object != null)
   assert.strictEqual(q.repository.object.__typename, 'Commit')
   assert(q.repository.object.checkSuites != null)
-  assert(q.repository.object.checkSuites.nodes != null)
+  assert(q.repository.object.checkSuites.edges != null)
 
   const workflowRuns: WorkflowRun[] = []
-  for (const checkSuite of q.repository.object.checkSuites.nodes) {
+  for (const checkSuiteEdge of q.repository.object.checkSuites.edges) {
+    assert(checkSuiteEdge != null)
+    const checkSuite = checkSuiteEdge.node
     assert(checkSuite != null)
     assert(checkSuite.workflowRun != null)
     assert(checkSuite.checkRuns != null)
-    assert(checkSuite.checkRuns.nodes != null)
+    assert(checkSuite.checkRuns.edges != null)
     if (checkSuite.workflowRun.event !== filter.event) {
       continue
     }
 
     const jobs: Job[] = []
-    for (const checkRun of checkSuite.checkRuns.nodes) {
+    for (const checkRunEdge of checkSuite.checkRuns.edges) {
+      assert(checkRunEdge != null)
+      const checkRun = checkRunEdge.node
       assert(checkRun != null)
       if (checkRun.startedAt == null || checkRun.completedAt == null) {
         continue

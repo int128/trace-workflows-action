@@ -4,7 +4,16 @@ import { ListChecksQuery, ListChecksQueryVariables } from '../generated/graphql.
 import { Octokit } from '../github.js'
 
 const query = /* GraphQL */ `
-  query listChecks($owner: String!, $name: String!, $oid: GitObjectID!, $appId: Int!, $afterCheckSuite: String) {
+  query listChecks(
+    $owner: String!
+    $name: String!
+    $oid: GitObjectID!
+    $appId: Int!
+    $firstCheckSuite: Int!
+    $afterCheckSuite: String
+    $firstCheckRun: Int!
+    $afterCheckRun: String
+  ) {
     rateLimit {
       cost
       remaining
@@ -13,36 +22,46 @@ const query = /* GraphQL */ `
       object(oid: $oid) {
         __typename
         ... on Commit {
-          checkSuites(filterBy: { appId: $appId }, first: 100, after: $afterCheckSuite) {
+          checkSuites(filterBy: { appId: $appId }, first: $firstCheckSuite, after: $afterCheckSuite) {
             totalCount
             pageInfo {
               hasNextPage
               endCursor
             }
-            nodes {
-              workflowRun {
-                event
-                workflow {
-                  name
+            edges {
+              cursor
+              node {
+                workflowRun {
+                  event
+                  workflow {
+                    name
+                  }
+                  url
                 }
-                url
-              }
-              status
-              conclusion
-              createdAt
-              checkRuns(filterBy: { checkType: LATEST, status: COMPLETED, appId: $appId }, first: 100) {
-                totalCount
-                pageInfo {
-                  hasNextPage
-                  endCursor
-                }
-                nodes {
-                  databaseId
-                  name
-                  status
-                  conclusion
-                  startedAt
-                  completedAt
+                status
+                conclusion
+                createdAt
+                checkRuns(
+                  filterBy: { checkType: LATEST, status: COMPLETED, appId: $appId }
+                  first: $firstCheckRun
+                  after: $afterCheckRun
+                ) {
+                  totalCount
+                  pageInfo {
+                    hasNextPage
+                    endCursor
+                  }
+                  edges {
+                    cursor
+                    node {
+                      databaseId
+                      name
+                      status
+                      conclusion
+                      startedAt
+                      completedAt
+                    }
+                  }
                 }
               }
             }
@@ -53,11 +72,6 @@ const query = /* GraphQL */ `
   }
 `
 
-export const getListChecksQuery = async (octokit: Octokit, v: ListChecksQueryVariables): Promise<ListChecksQuery> => {
-  const fn = createQueryFunction(octokit)
-  return await paginateCheckSuites(fn, v)
-}
-
 type QueryFunction = (v: ListChecksQueryVariables) => Promise<ListChecksQuery>
 
 const createQueryFunction =
@@ -65,38 +79,134 @@ const createQueryFunction =
   async (v: ListChecksQueryVariables): Promise<ListChecksQuery> =>
     core.group(`ListChecksQuery(${JSON.stringify(v)})`, async () => {
       const q: ListChecksQuery = await octokit.graphql(query, v)
+      assert(q.rateLimit != null)
+      core.info(`rateLimit.cost: ${q.rateLimit.cost}`)
+      core.info(`rateLimit.remaining: ${q.rateLimit.remaining}`)
       core.debug(JSON.stringify(q, undefined, 2))
       return q
     })
 
-const paginateCheckSuites = async (
-  fn: QueryFunction,
-  v: ListChecksQueryVariables,
-  previous?: ListChecksQuery,
-): Promise<ListChecksQuery> => {
+export const getListChecksQuery = async (octokit: Octokit, v: ListChecksQueryVariables): Promise<ListChecksQuery> => {
+  const fn = createQueryFunction(octokit)
+
   const q = await fn(v)
   assert(q.repository != null)
   assert(q.repository.object != null)
   assert.strictEqual(q.repository.object.__typename, 'Commit')
   assert(q.repository.object.checkSuites != null)
-  assert(q.repository.object.checkSuites.nodes != null)
+  q.repository.object.checkSuites = await paginateCheckSuites(fn, v, q.repository.object.checkSuites)
+  core.info(`Fetched all CheckSuites`)
 
-  if (previous !== undefined) {
-    assert(previous.repository != null)
-    assert(previous.repository.object != null)
-    assert.strictEqual(previous.repository.object.__typename, 'Commit')
-    assert(previous.repository.object.checkSuites != null)
-    assert(previous.repository.object.checkSuites.nodes != null)
-    q.repository.object.checkSuites.nodes.unshift(...previous.repository.object.checkSuites.nodes)
+  await paginateCheckRunsOfCheckSuites(fn, v, q.repository.object.checkSuites)
+  core.info(`Fetched all CheckRuns`)
+
+  return q
+}
+
+const paginateCheckSuites = async (
+  fn: QueryFunction,
+  v: ListChecksQueryVariables,
+  cumulativeCheckSuites: CheckSuites,
+): Promise<CheckSuites> => {
+  assert(cumulativeCheckSuites.edges != null)
+  core.info(`Fetched ${cumulativeCheckSuites.edges.length} of ${cumulativeCheckSuites.totalCount} CheckSuites`)
+  if (!cumulativeCheckSuites.pageInfo.hasNextPage) {
+    return cumulativeCheckSuites
   }
 
-  core.info(
-    `CheckSuites: ${q.repository.object.checkSuites.nodes.length} / ${q.repository.object.checkSuites.totalCount}`,
-  )
+  const nextQuery = await fn({
+    ...v,
+    afterCheckSuite: cumulativeCheckSuites.pageInfo.endCursor,
+  })
+  const nextCheckSuites = getCheckSuites(nextQuery)
+  assert(nextCheckSuites.edges != null)
+  return await paginateCheckSuites(fn, v, {
+    ...nextCheckSuites,
+    edges: [...cumulativeCheckSuites.edges, ...nextCheckSuites.edges],
+  })
+}
 
-  if (!q.repository.object.checkSuites.pageInfo.hasNextPage) {
-    return q
+type CheckSuites = ReturnType<typeof getCheckSuites>
+
+const getCheckSuites = (q: ListChecksQuery) => {
+  assert(q.repository != null)
+  assert(q.repository.object != null)
+  assert.strictEqual(q.repository.object.__typename, 'Commit')
+  assert(q.repository.object.checkSuites != null)
+  return q.repository.object.checkSuites
+}
+
+const paginateCheckRunsOfCheckSuites = async (
+  fn: QueryFunction,
+  v: ListChecksQueryVariables,
+  checkSuites: CheckSuites,
+) => {
+  assert(checkSuites.edges != null)
+  for (const [previousCheckSuite, currentCheckSuite] of previousGenerator(checkSuites.edges)) {
+    assert(previousCheckSuite != null)
+    assert(currentCheckSuite != null)
+    assert(currentCheckSuite.node != null)
+    assert(currentCheckSuite.node.checkRuns != null)
+    currentCheckSuite.node.checkRuns = await paginateCheckRunsOfCheckSuite(
+      fn,
+      v,
+      previousCheckSuite.cursor,
+      currentCheckSuite.cursor,
+      currentCheckSuite.node.checkRuns,
+    )
   }
-  const afterCheckSuite = q.repository.object.checkSuites.pageInfo.endCursor
-  return await paginateCheckSuites(fn, { ...v, afterCheckSuite }, q)
+}
+
+const paginateCheckRunsOfCheckSuite = async (
+  fn: QueryFunction,
+  v: ListChecksQueryVariables,
+  previousCheckSuiteCursor: string,
+  currentCheckSuiteCursor: string,
+  cumulativeCheckRuns: CheckRuns,
+): Promise<CheckRuns> => {
+  assert(cumulativeCheckRuns.edges != null)
+  core.info(`Fetched ${cumulativeCheckRuns.edges.length} of ${cumulativeCheckRuns.totalCount} CheckRuns`)
+  if (!cumulativeCheckRuns.pageInfo.hasNextPage) {
+    return cumulativeCheckRuns
+  }
+
+  const nextQuery = await fn({
+    ...v,
+    // Fetch the current check suite, that is, the first one after the previous check suite
+    firstCheckSuite: 1,
+    afterCheckSuite: previousCheckSuiteCursor,
+    firstCheckRun: 100,
+    afterCheckRun: cumulativeCheckRuns.pageInfo.endCursor,
+  })
+  const nextCheckRuns = getCheckRuns(nextQuery, currentCheckSuiteCursor)
+  assert(nextCheckRuns.edges != null)
+  return await paginateCheckRunsOfCheckSuite(fn, v, previousCheckSuiteCursor, currentCheckSuiteCursor, {
+    ...nextCheckRuns,
+    edges: [...cumulativeCheckRuns.edges, ...nextCheckRuns.edges],
+  })
+}
+
+type CheckRuns = ReturnType<typeof getCheckRuns>
+
+const getCheckRuns = (q: ListChecksQuery, checkSuiteCursor: string) => {
+  assert(q.repository != null)
+  assert(q.repository.object != null)
+  assert.strictEqual(q.repository.object.__typename, 'Commit')
+  assert(q.repository.object.checkSuites != null)
+  assert(q.repository.object.checkSuites.edges != null)
+  for (const checkSuiteEdge of q.repository.object.checkSuites.edges) {
+    assert(checkSuiteEdge != null)
+    if (checkSuiteEdge.cursor === checkSuiteCursor) {
+      assert(checkSuiteEdge.node != null)
+      assert(checkSuiteEdge.node.checkRuns != null)
+      return checkSuiteEdge.node.checkRuns
+    }
+  }
+  throw new Error(`internal error: no such CheckSuite cursor ${checkSuiteCursor}`)
+}
+
+function* previousGenerator<T>(a: T[]): Generator<[T, T]> {
+  for (let i = 1; i < a.length; i++) {
+    yield [a[i - 1], a[i]]
+  }
 }

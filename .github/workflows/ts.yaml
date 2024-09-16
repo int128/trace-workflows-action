@@ -36,8 +36,11 @@ jobs:
       - run: pnpm test
       - run: pnpm build
 
-      - name: e2e-test
+      - name: Run int128/trace-workflows-action
         uses: ./
+        with:
+          page-size-of-check-suites: 1
+          page-size-of-check-runs: 1
 
   generate:
     runs-on: ubuntu-latest

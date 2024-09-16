@@ -17,43 +17,49 @@ describe('summaryListChecksQuery', () => {
           checkSuites: {
             __typename: 'CheckSuiteConnection',
             pageInfo: {
-              endCursor: 'cursor',
+              endCursor: 'CheckSuiteCursor',
               hasNextPage: false,
             },
             totalCount: 1,
-            nodes: [
+            edges: [
               {
-                __typename: 'CheckSuite',
-                workflowRun: {
-                  __typename: 'WorkflowRun',
-                  event: 'push',
-                  workflow: {
-                    __typename: 'Workflow',
-                    name: 'CI',
-                  },
-                  url: 'https://github.com/int128/trace-workflows-action/actions/runs/2',
-                },
-                createdAt: '2021-08-04T00:00:00Z',
-                status: CheckStatusState.Completed,
-                conclusion: CheckConclusionState.Success,
-                checkRuns: {
-                  __typename: 'CheckRunConnection',
-                  pageInfo: {
-                    endCursor: 'cursor',
-                    hasNextPage: false,
-                  },
-                  totalCount: 1,
-                  nodes: [
-                    {
-                      __typename: 'CheckRun',
-                      databaseId: 3,
-                      name: 'build',
-                      status: CheckStatusState.Completed,
-                      conclusion: CheckConclusionState.Success,
-                      startedAt: '2021-08-04T00:00:00Z',
-                      completedAt: '2021-08-04T00:01:00Z',
+                cursor: 'CheckSuiteCursor',
+                node: {
+                  __typename: 'CheckSuite',
+                  workflowRun: {
+                    __typename: 'WorkflowRun',
+                    event: 'push',
+                    workflow: {
+                      __typename: 'Workflow',
+                      name: 'CI',
                     },
-                  ],
+                    url: 'https://github.com/int128/trace-workflows-action/actions/runs/2',
+                  },
+                  createdAt: '2021-08-04T00:00:00Z',
+                  status: CheckStatusState.Completed,
+                  conclusion: CheckConclusionState.Success,
+                  checkRuns: {
+                    __typename: 'CheckRunConnection',
+                    pageInfo: {
+                      endCursor: 'CheckRunCursor',
+                      hasNextPage: false,
+                    },
+                    totalCount: 1,
+                    edges: [
+                      {
+                        cursor: 'CheckRunCursor',
+                        node: {
+                          __typename: 'CheckRun',
+                          databaseId: 3,
+                          name: 'build',
+                          status: CheckStatusState.Completed,
+                          conclusion: CheckConclusionState.Success,
+                          startedAt: '2021-08-04T00:00:00Z',
+                          completedAt: '2021-08-04T00:01:00Z',
+                        },
+                      },
+                    ],
+                  },
                 },
               },
             ],
