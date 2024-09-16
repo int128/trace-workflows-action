@@ -81,14 +81,15 @@ export const getListChecksQuery = async (octokit: Octokit, v: ListChecksQueryVar
   assert(q.repository.object != null)
   assert.strictEqual(q.repository.object.__typename, 'Commit')
   assert(q.repository.object.checkSuites != null)
-  q.repository.object.checkSuites = await paginateCheckSuites(fn, v, getCheckSuites(q))
+  q.repository.object.checkSuites = await paginateCheckSuites(fn, v, q.repository.object.checkSuites)
 
   core.info(`Fetching all check runs`)
   assert(q.repository.object.checkSuites.edges != null)
-  for (const edge of q.repository.object.checkSuites.edges) {
-    assert(edge != null)
-    assert(edge.node != null)
-    edge.node.checkRuns = await paginateCheckRuns(fn, v, edge.cursor, getCheckRuns(q, edge.cursor))
+  for (const checkSuiteEdge of q.repository.object.checkSuites.edges) {
+    assert(checkSuiteEdge != null)
+    assert(checkSuiteEdge.node != null)
+    assert(checkSuiteEdge.node.checkRuns != null)
+    checkSuiteEdge.node.checkRuns = await paginateCheckRuns(fn, v, checkSuiteEdge.cursor, checkSuiteEdge.node.checkRuns)
   }
   return q
 }
@@ -176,12 +177,12 @@ const getCheckRuns = (q: ListChecksQuery, checkSuiteCursor: string) => {
   assert.strictEqual(q.repository.object.__typename, 'Commit')
   assert(q.repository.object.checkSuites != null)
   assert(q.repository.object.checkSuites.edges != null)
-  for (const edge of q.repository.object.checkSuites.edges) {
-    assert(edge != null)
-    if (edge.cursor === checkSuiteCursor) {
-      assert(edge.node != null)
-      assert(edge.node.checkRuns != null)
-      return edge.node.checkRuns
+  for (const checkSuiteEdge of q.repository.object.checkSuites.edges) {
+    assert(checkSuiteEdge != null)
+    if (checkSuiteEdge.cursor === checkSuiteCursor) {
+      assert(checkSuiteEdge.node != null)
+      assert(checkSuiteEdge.node.checkRuns != null)
+      return checkSuiteEdge.node.checkRuns
     }
   }
   throw new Error(`internal error: no such CheckSuite cursor ${checkSuiteCursor}`)
