@@ -97,7 +97,7 @@ export const getListChecksQuery = async (octokit: Octokit, v: ListChecksQueryVar
   q.repository.object.checkSuites = await paginateCheckSuites(fn, v, q.repository.object.checkSuites)
   core.info(`Fetched all CheckSuites`)
 
-  await fetchCheckRunsOfCheckSuites(fn, v, q.repository.object.checkSuites)
+  await paginateCheckRunsOfCheckSuites(fn, v, q.repository.object.checkSuites)
   core.info(`Fetched all CheckRuns`)
 
   return q
@@ -136,7 +136,7 @@ const getCheckSuites = (q: ListChecksQuery) => {
   return q.repository.object.checkSuites
 }
 
-const fetchCheckRunsOfCheckSuites = async (
+const paginateCheckRunsOfCheckSuites = async (
   fn: QueryFunction,
   v: ListChecksQueryVariables,
   checkSuites: CheckSuites,
@@ -147,7 +147,7 @@ const fetchCheckRunsOfCheckSuites = async (
     assert(currentCheckSuite != null)
     assert(currentCheckSuite.node != null)
     assert(currentCheckSuite.node.checkRuns != null)
-    currentCheckSuite.node.checkRuns = await paginateCheckRuns(
+    currentCheckSuite.node.checkRuns = await paginateCheckRunsOfCheckSuite(
       fn,
       v,
       previousCheckSuite.cursor,
@@ -157,7 +157,7 @@ const fetchCheckRunsOfCheckSuites = async (
   }
 }
 
-const paginateCheckRuns = async (
+const paginateCheckRunsOfCheckSuite = async (
   fn: QueryFunction,
   v: ListChecksQueryVariables,
   previousCheckSuiteCursor: string,
@@ -180,7 +180,7 @@ const paginateCheckRuns = async (
   })
   const nextCheckRuns = getCheckRuns(nextQuery, currentCheckSuiteCursor)
   assert(nextCheckRuns.edges != null)
-  return await paginateCheckRuns(fn, v, previousCheckSuiteCursor, currentCheckSuiteCursor, {
+  return await paginateCheckRunsOfCheckSuite(fn, v, previousCheckSuiteCursor, currentCheckSuiteCursor, {
     ...nextCheckRuns,
     edges: [...cumulativeCheckRuns.edges, ...nextCheckRuns.edges],
   })
