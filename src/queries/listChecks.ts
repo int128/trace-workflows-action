@@ -10,8 +10,8 @@ const query = /* GraphQL */ `
     $oid: GitObjectID!
     $appId: Int!
     $firstCheckSuite: Int!
-    $firstCheckRun: Int!
     $afterCheckSuite: String
+    $firstCheckRun: Int!
     $afterCheckRun: String
   ) {
     rateLimit {
