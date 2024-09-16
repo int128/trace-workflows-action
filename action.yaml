@@ -12,11 +12,15 @@ inputs:
   page-size-of-check-suites:
     description: Page size of CheckSuites query
     required: true
-    default: '100'
+    default: '10'
   page-size-of-check-runs:
     description: Page size of CheckRuns query
     required: true
-    default: '100'
+    default: '10'
+  page-size-of-steps:
+    description: Page size of Steps query
+    required: true
+    default: '50'
 
 runs:
   using: 'node20'

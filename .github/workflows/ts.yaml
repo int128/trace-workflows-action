@@ -41,6 +41,7 @@ jobs:
         with:
           page-size-of-check-suites: 1
           page-size-of-check-runs: 1
+          page-size-of-steps: 1
 
   generate:
     runs-on: ubuntu-latest

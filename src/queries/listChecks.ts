@@ -13,6 +13,8 @@ const query = /* GraphQL */ `
     $afterCheckSuite: String
     $firstCheckRun: Int!
     $afterCheckRun: String
+    $firstStep: Int!
+    $afterStep: String
   ) {
     rateLimit {
       cost
@@ -60,6 +62,23 @@ const query = /* GraphQL */ `
                       conclusion
                       startedAt
                       completedAt
+                      steps(first: $firstStep, after: $afterStep) {
+                        totalCount
+                        pageInfo {
+                          hasNextPage
+                          endCursor
+                        }
+                        edges {
+                          cursor
+                          node {
+                            name
+                            status
+                            conclusion
+                            startedAt
+                            completedAt
+                          }
+                        }
+                      }
                     }
                   }
                 }
@@ -99,6 +118,9 @@ export const getListChecksQuery = async (octokit: Octokit, v: ListChecksQueryVar
 
   await paginateCheckRunsOfCheckSuites(fn, v, q.repository.object.checkSuites)
   core.info(`Fetched all CheckRuns`)
+
+  await paginateStepsOfCheckRunsOfCheckSuites(fn, v, q.repository.object.checkSuites)
+  core.info(`Fetched all Steps`)
 
   return q
 }
@@ -203,6 +225,103 @@ const getCheckRuns = (q: ListChecksQuery, checkSuiteCursor: string) => {
     }
   }
   throw new Error(`internal error: no such CheckSuite cursor ${checkSuiteCursor}`)
+}
+
+const paginateStepsOfCheckRunsOfCheckSuites = async (
+  fn: QueryFunction,
+  v: ListChecksQueryVariables,
+  checkSuites: CheckSuites,
+) => {
+  assert(checkSuites.edges != null)
+  for (const [previousCheckSuite, currentCheckSuite] of previousGenerator(checkSuites.edges)) {
+    assert(previousCheckSuite != null)
+    assert(currentCheckSuite != null)
+    assert(currentCheckSuite.node != null)
+    assert(currentCheckSuite.node.checkRuns != null)
+    assert(currentCheckSuite.node.checkRuns.edges != null)
+    for (const [previousCheckRun, currentCheckRun] of previousGenerator(currentCheckSuite.node.checkRuns.edges)) {
+      assert(previousCheckRun != null)
+      assert(currentCheckRun != null)
+      assert(currentCheckRun.node != null)
+      assert(currentCheckRun.node.steps != null)
+      currentCheckRun.node.steps = await paginateStepsOfCheckRun(
+        fn,
+        v,
+        previousCheckSuite.cursor,
+        currentCheckSuite.cursor,
+        previousCheckRun.cursor,
+        currentCheckRun.cursor,
+        currentCheckRun.node.steps,
+      )
+    }
+  }
+}
+
+const paginateStepsOfCheckRun = async (
+  fn: QueryFunction,
+  v: ListChecksQueryVariables,
+  previousCheckSuiteCursor: string,
+  currentCheckSuiteCursor: string,
+  previousCheckRunCursor: string,
+  currentCheckRunCursor: string,
+  cumulativeSteps: Steps,
+): Promise<Steps> => {
+  assert(cumulativeSteps.edges != null)
+  core.info(`Fetched ${cumulativeSteps.edges.length} of ${cumulativeSteps.totalCount} Steps`)
+  if (!cumulativeSteps.pageInfo.hasNextPage) {
+    return cumulativeSteps
+  }
+
+  const nextQuery = await fn({
+    ...v,
+    firstCheckSuite: 1,
+    afterCheckSuite: previousCheckSuiteCursor,
+    firstCheckRun: 1,
+    afterCheckRun: previousCheckRunCursor,
+    firstStep: 100,
+    afterStep: cumulativeSteps.pageInfo.endCursor,
+  })
+  const nextSteps = getSteps(nextQuery, currentCheckSuiteCursor, currentCheckRunCursor)
+  assert(nextSteps.edges != null)
+  return await paginateStepsOfCheckRun(
+    fn,
+    v,
+    previousCheckSuiteCursor,
+    currentCheckSuiteCursor,
+    previousCheckRunCursor,
+    currentCheckRunCursor,
+    {
+      ...nextSteps,
+      edges: [...cumulativeSteps.edges, ...nextSteps.edges],
+    },
+  )
+}
+
+type Steps = ReturnType<typeof getSteps>
+
+const getSteps = (q: ListChecksQuery, checkSuiteCursor: string, checkRunCursor: string) => {
+  assert(q.repository != null)
+  assert(q.repository.object != null)
+  assert.strictEqual(q.repository.object.__typename, 'Commit')
+  assert(q.repository.object.checkSuites != null)
+  assert(q.repository.object.checkSuites.edges != null)
+  for (const checkSuiteEdge of q.repository.object.checkSuites.edges) {
+    assert(checkSuiteEdge != null)
+    if (checkSuiteEdge.cursor === checkSuiteCursor) {
+      assert(checkSuiteEdge.node != null)
+      assert(checkSuiteEdge.node.checkRuns != null)
+      assert(checkSuiteEdge.node.checkRuns.edges != null)
+      for (const checkRunEdge of checkSuiteEdge.node.checkRuns.edges) {
+        assert(checkRunEdge != null)
+        if (checkRunEdge.cursor === checkRunCursor) {
+          assert(checkRunEdge.node != null)
+          assert(checkRunEdge.node.steps != null)
+          return checkRunEdge.node.steps
+        }
+      }
+    }
+  }
+  throw new Error(`internal error: no such CheckRun cursor ${checkRunCursor}`)
 }
 
 function* previousGenerator<T>(a: T[]): Generator<[T, T]> {

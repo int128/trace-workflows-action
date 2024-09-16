@@ -30,6 +30,15 @@ export type Job = {
   conclusion: CheckConclusionState | null | undefined
   startedAt: Date
   completedAt: Date
+  steps: Step[]
+}
+
+export type Step = {
+  name: string
+  status: CheckStatusState
+  conclusion: CheckConclusionState | null | undefined
+  startedAt: Date
+  completedAt: Date
 }
 
 export const summaryListChecksQuery = (q: ListChecksQuery, filter: Filter): WorkflowEvent => {
@@ -57,12 +66,34 @@ export const summaryListChecksQuery = (q: ListChecksQuery, filter: Filter): Work
       assert(checkRunEdge != null)
       const checkRun = checkRunEdge.node
       assert(checkRun != null)
+      assert(checkRun.steps != null)
+      assert(checkRun.steps.edges != null)
       if (checkRun.startedAt == null || checkRun.completedAt == null) {
         continue
       }
       if (checkRun.conclusion === CheckConclusionState.Skipped) {
         continue
       }
+
+      const steps: Step[] = []
+      for (const step of checkRun.steps.edges) {
+        assert(step != null)
+        assert(step.node != null)
+        if (step.node.startedAt == null || step.node.completedAt == null) {
+          continue
+        }
+        if (step.node.conclusion === CheckConclusionState.Skipped) {
+          continue
+        }
+        steps.push({
+          name: step.node.name,
+          status: step.node.status,
+          conclusion: step.node.conclusion,
+          startedAt: new Date(step.node.startedAt),
+          completedAt: new Date(step.node.completedAt),
+        })
+      }
+
       jobs.push({
         name: checkRun.name,
         url: `${checkSuite.workflowRun.url}/job/${checkRun.databaseId}`,
@@ -70,6 +101,7 @@ export const summaryListChecksQuery = (q: ListChecksQuery, filter: Filter): Work
         conclusion: checkRun.conclusion,
         startedAt: new Date(checkRun.startedAt),
         completedAt: new Date(checkRun.completedAt),
+        steps,
       })
     }
 
