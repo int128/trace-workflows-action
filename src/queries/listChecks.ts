@@ -74,10 +74,15 @@ const query = /* GraphQL */ `
 
 export const getListChecksQuery = async (octokit: Octokit, v: ListChecksQueryVariables): Promise<ListChecksQuery> => {
   const fn = createQueryFunction(octokit)
-  core.info(`Fetching all check suites`)
-  const q = await fetchAllCheckSuites(fn, v)
-  core.info(`Fetching all check runs`)
-  await fetchAllCheckRunsOfCheckSuites(fn, v, q)
+  const q = await fn(v)
+  assert(q.repository != null)
+  assert(q.repository.object != null)
+  assert.strictEqual(q.repository.object.__typename, 'Commit')
+  assert(q.repository.object.checkSuites != null)
+  q.repository.object.checkSuites = await paginateCheckSuites(fn, v, q.repository.object.checkSuites)
+  core.info(`Fetched all CheckSuites`)
+  await fetchAllCheckRunsOfCheckSuites(fn, v, q.repository.object.checkSuites)
+  core.info(`Fetched all CheckRuns`)
   return q
 }
 
@@ -95,23 +100,13 @@ const createQueryFunction =
       return q
     })
 
-const fetchAllCheckSuites = async (fn: QueryFunction, v: ListChecksQueryVariables): Promise<ListChecksQuery> => {
-  const q = await fn(v)
-  assert(q.repository != null)
-  assert(q.repository.object != null)
-  assert.strictEqual(q.repository.object.__typename, 'Commit')
-  assert(q.repository.object.checkSuites != null)
-  q.repository.object.checkSuites = await paginateCheckSuites(fn, v, q.repository.object.checkSuites)
-  return q
-}
-
 const paginateCheckSuites = async (
   fn: QueryFunction,
   v: ListChecksQueryVariables,
   cumulativeCheckSuites: CheckSuites,
 ): Promise<CheckSuites> => {
   assert(cumulativeCheckSuites.edges != null)
-  core.info(`Fetched ${cumulativeCheckSuites.edges.length} of ${cumulativeCheckSuites.totalCount} check suites`)
+  core.info(`Fetched ${cumulativeCheckSuites.edges.length} of ${cumulativeCheckSuites.totalCount} CheckSuites`)
   if (!cumulativeCheckSuites.pageInfo.hasNextPage) {
     return cumulativeCheckSuites
   }
@@ -138,24 +133,24 @@ const getCheckSuites = (q: ListChecksQuery) => {
   return q.repository.object.checkSuites
 }
 
-const fetchAllCheckRunsOfCheckSuites = async (fn: QueryFunction, v: ListChecksQueryVariables, q: ListChecksQuery) => {
-  const checkSuites = getCheckSuites(q)
+const fetchAllCheckRunsOfCheckSuites = async (
+  fn: QueryFunction,
+  v: ListChecksQueryVariables,
+  checkSuites: CheckSuites,
+) => {
   assert(checkSuites.edges != null)
-
-  function* checkSuiteGenerator() {
-    assert(checkSuites.edges != null)
-    for (let i = 1; i < checkSuites.edges.length; i++) {
-      const previous = checkSuites.edges[i - 1]
-      const current = checkSuites.edges[i]
-      assert(previous != null)
-      assert(current != null)
-      yield [previous, current]
-    }
-  }
-  for (const [previous, current] of checkSuiteGenerator()) {
-    assert(current.node != null)
-    assert(current.node.checkRuns != null)
-    current.node.checkRuns = await paginateCheckRuns(fn, v, previous.cursor, current.cursor, current.node.checkRuns)
+  for (const [previousCheckSuite, currentCheckSuite] of previousGenerator(checkSuites.edges)) {
+    assert(previousCheckSuite != null)
+    assert(currentCheckSuite != null)
+    assert(currentCheckSuite.node != null)
+    assert(currentCheckSuite.node.checkRuns != null)
+    currentCheckSuite.node.checkRuns = await paginateCheckRuns(
+      fn,
+      v,
+      previousCheckSuite.cursor,
+      currentCheckSuite.cursor,
+      currentCheckSuite.node.checkRuns,
+    )
   }
 }
 
@@ -167,7 +162,7 @@ const paginateCheckRuns = async (
   cumulativeCheckRuns: CheckRuns,
 ): Promise<CheckRuns> => {
   assert(cumulativeCheckRuns.edges != null)
-  core.info(`Fetched ${cumulativeCheckRuns.edges.length} of ${cumulativeCheckRuns.totalCount} check runs`)
+  core.info(`Fetched ${cumulativeCheckRuns.edges.length} of ${cumulativeCheckRuns.totalCount} CheckRuns`)
   if (!cumulativeCheckRuns.pageInfo.hasNextPage) {
     return cumulativeCheckRuns
   }
@@ -205,4 +200,10 @@ const getCheckRuns = (q: ListChecksQuery, checkSuiteCursor: string) => {
     }
   }
   throw new Error(`internal error: no such CheckSuite cursor ${checkSuiteCursor}`)
+}
+
+function* previousGenerator<T>(a: T[]): Generator<[T, T]> {
+  for (let i = 1; i < a.length; i++) {
+    yield [a[i - 1], a[i]]
+  }
 }
