@@ -72,20 +72,6 @@ const query = /* GraphQL */ `
   }
 `
 
-export const getListChecksQuery = async (octokit: Octokit, v: ListChecksQueryVariables): Promise<ListChecksQuery> => {
-  const fn = createQueryFunction(octokit)
-  const q = await fn(v)
-  assert(q.repository != null)
-  assert(q.repository.object != null)
-  assert.strictEqual(q.repository.object.__typename, 'Commit')
-  assert(q.repository.object.checkSuites != null)
-  q.repository.object.checkSuites = await paginateCheckSuites(fn, v, q.repository.object.checkSuites)
-  core.info(`Fetched all CheckSuites`)
-  await fetchAllCheckRunsOfCheckSuites(fn, v, q.repository.object.checkSuites)
-  core.info(`Fetched all CheckRuns`)
-  return q
-}
-
 type QueryFunction = (v: ListChecksQueryVariables) => Promise<ListChecksQuery>
 
 const createQueryFunction =
@@ -99,6 +85,23 @@ const createQueryFunction =
       core.debug(JSON.stringify(q, undefined, 2))
       return q
     })
+
+export const getListChecksQuery = async (octokit: Octokit, v: ListChecksQueryVariables): Promise<ListChecksQuery> => {
+  const fn = createQueryFunction(octokit)
+
+  const q = await fn(v)
+  assert(q.repository != null)
+  assert(q.repository.object != null)
+  assert.strictEqual(q.repository.object.__typename, 'Commit')
+  assert(q.repository.object.checkSuites != null)
+  q.repository.object.checkSuites = await paginateCheckSuites(fn, v, q.repository.object.checkSuites)
+  core.info(`Fetched all CheckSuites`)
+
+  await fetchCheckRunsOfCheckSuites(fn, v, q.repository.object.checkSuites)
+  core.info(`Fetched all CheckRuns`)
+
+  return q
+}
 
 const paginateCheckSuites = async (
   fn: QueryFunction,
@@ -133,7 +136,7 @@ const getCheckSuites = (q: ListChecksQuery) => {
   return q.repository.object.checkSuites
 }
 
-const fetchAllCheckRunsOfCheckSuites = async (
+const fetchCheckRunsOfCheckSuites = async (
   fn: QueryFunction,
   v: ListChecksQueryVariables,
   checkSuites: CheckSuites,
