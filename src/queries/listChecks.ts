@@ -153,7 +153,7 @@ const paginateCheckRunsOfCheckSuites = async (
 const paginateCheckRunsOfCheckSuite = async (
   fn: QueryFunction,
   v: ListChecksQueryVariables,
-  previousCheckSuiteCursor: string | undefined,
+  previousCheckSuiteCursor: string | undefined, // undefined for the first CheckSuite
   currentCheckSuiteCursor: string,
   cumulativeCheckRuns: CheckRuns,
 ): Promise<void> => {
@@ -161,7 +161,7 @@ const paginateCheckRunsOfCheckSuite = async (
   while (cumulativeCheckRuns.pageInfo.hasNextPage) {
     const nextQuery = await fn({
       ...v,
-      // Fetch the current check suite, that is, the first one after the previous check suite
+      // Fetch only the current check suite
       firstCheckSuite: 1,
       afterCheckSuite: previousCheckSuiteCursor,
       firstCheckRun: 100,
