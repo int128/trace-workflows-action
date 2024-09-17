@@ -90,14 +90,11 @@ export const getListChecksQuery = async (octokit: Octokit, v: ListChecksQueryVar
   const fn = createQueryFunction(octokit)
 
   const q = await fn(v)
-  assert(q.repository != null)
-  assert(q.repository.object != null)
-  assert.strictEqual(q.repository.object.__typename, 'Commit')
-  assert(q.repository.object.checkSuites != null)
-  q.repository.object.checkSuites = await paginateCheckSuites(fn, v, q.repository.object.checkSuites)
+  const checkSuites = getCheckSuites(q)
+  await paginateCheckSuites(fn, v, checkSuites)
   core.info(`Fetched all CheckSuites`)
 
-  await paginateCheckRunsOfCheckSuites(fn, v, q.repository.object.checkSuites)
+  await paginateCheckRunsOfCheckSuites(fn, v, checkSuites)
   core.info(`Fetched all CheckRuns`)
 
   return q
@@ -107,23 +104,20 @@ const paginateCheckSuites = async (
   fn: QueryFunction,
   v: ListChecksQueryVariables,
   cumulativeCheckSuites: CheckSuites,
-): Promise<CheckSuites> => {
+): Promise<void> => {
   assert(cumulativeCheckSuites.edges != null)
-  core.info(`Fetched ${cumulativeCheckSuites.edges.length} of ${cumulativeCheckSuites.totalCount} CheckSuites`)
-  if (!cumulativeCheckSuites.pageInfo.hasNextPage) {
-    return cumulativeCheckSuites
+  while (cumulativeCheckSuites.pageInfo.hasNextPage) {
+    const nextQuery = await fn({
+      ...v,
+      afterCheckSuite: cumulativeCheckSuites.pageInfo.endCursor,
+    })
+    const nextCheckSuites = getCheckSuites(nextQuery)
+    assert(nextCheckSuites.edges != null)
+    cumulativeCheckSuites.edges.push(...nextCheckSuites.edges)
+    cumulativeCheckSuites.totalCount = nextCheckSuites.totalCount
+    cumulativeCheckSuites.pageInfo = nextCheckSuites.pageInfo
+    core.info(`Fetched ${cumulativeCheckSuites.edges.length} of ${cumulativeCheckSuites.totalCount} CheckSuites`)
   }
-
-  const nextQuery = await fn({
-    ...v,
-    afterCheckSuite: cumulativeCheckSuites.pageInfo.endCursor,
-  })
-  const nextCheckSuites = getCheckSuites(nextQuery)
-  assert(nextCheckSuites.edges != null)
-  return await paginateCheckSuites(fn, v, {
-    ...nextCheckSuites,
-    edges: [...cumulativeCheckSuites.edges, ...nextCheckSuites.edges],
-  })
 }
 
 type CheckSuites = ReturnType<typeof getCheckSuites>
@@ -147,7 +141,7 @@ const paginateCheckRunsOfCheckSuites = async (
     assert(currentCheckSuite != null)
     assert(currentCheckSuite.node != null)
     assert(currentCheckSuite.node.checkRuns != null)
-    currentCheckSuite.node.checkRuns = await paginateCheckRunsOfCheckSuite(
+    await paginateCheckRunsOfCheckSuite(
       fn,
       v,
       previousCheckSuite.cursor,
@@ -163,27 +157,24 @@ const paginateCheckRunsOfCheckSuite = async (
   previousCheckSuiteCursor: string,
   currentCheckSuiteCursor: string,
   cumulativeCheckRuns: CheckRuns,
-): Promise<CheckRuns> => {
+): Promise<void> => {
   assert(cumulativeCheckRuns.edges != null)
-  core.info(`Fetched ${cumulativeCheckRuns.edges.length} of ${cumulativeCheckRuns.totalCount} CheckRuns`)
-  if (!cumulativeCheckRuns.pageInfo.hasNextPage) {
-    return cumulativeCheckRuns
+  while (cumulativeCheckRuns.pageInfo.hasNextPage) {
+    const nextQuery = await fn({
+      ...v,
+      // Fetch the current check suite, that is, the first one after the previous check suite
+      firstCheckSuite: 1,
+      afterCheckSuite: previousCheckSuiteCursor,
+      firstCheckRun: 100,
+      afterCheckRun: cumulativeCheckRuns.pageInfo.endCursor,
+    })
+    const nextCheckRuns = getCheckRuns(nextQuery, currentCheckSuiteCursor)
+    assert(nextCheckRuns.edges != null)
+    cumulativeCheckRuns.edges.push(...nextCheckRuns.edges)
+    cumulativeCheckRuns.totalCount = nextCheckRuns.totalCount
+    cumulativeCheckRuns.pageInfo = nextCheckRuns.pageInfo
+    core.info(`Fetched ${cumulativeCheckRuns.edges.length} of ${cumulativeCheckRuns.totalCount} CheckRuns`)
   }
-
-  const nextQuery = await fn({
-    ...v,
-    // Fetch the current check suite, that is, the first one after the previous check suite
-    firstCheckSuite: 1,
-    afterCheckSuite: previousCheckSuiteCursor,
-    firstCheckRun: 100,
-    afterCheckRun: cumulativeCheckRuns.pageInfo.endCursor,
-  })
-  const nextCheckRuns = getCheckRuns(nextQuery, currentCheckSuiteCursor)
-  assert(nextCheckRuns.edges != null)
-  return await paginateCheckRunsOfCheckSuite(fn, v, previousCheckSuiteCursor, currentCheckSuiteCursor, {
-    ...nextCheckRuns,
-    edges: [...cumulativeCheckRuns.edges, ...nextCheckRuns.edges],
-  })
 }
 
 type CheckRuns = ReturnType<typeof getCheckRuns>
