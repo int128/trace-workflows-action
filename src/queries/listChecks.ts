@@ -239,8 +239,9 @@ const paginateStepsOfCheckRunsOfCheckSuites = async (
     assert(currentCheckSuite.node != null)
     assert(currentCheckSuite.node.checkRuns != null)
     assert(currentCheckSuite.node.checkRuns.edges != null)
-    for (const [previousCheckRun, currentCheckRun] of previousGenerator(currentCheckSuite.node.checkRuns.edges)) {
-      assert(previousCheckRun != null)
+    for (const [previousCheckRun, currentCheckRun] of previousGeneratorFromZeroIndex(
+      currentCheckSuite.node.checkRuns.edges,
+    )) {
       assert(currentCheckRun != null)
       assert(currentCheckRun.node != null)
       assert(currentCheckRun.node.steps != null)
@@ -249,7 +250,7 @@ const paginateStepsOfCheckRunsOfCheckSuites = async (
         v,
         previousCheckSuite.cursor,
         currentCheckSuite.cursor,
-        previousCheckRun.cursor,
+        previousCheckRun?.cursor,
         currentCheckRun.cursor,
         currentCheckRun.node.steps,
       )
@@ -262,7 +263,7 @@ const paginateStepsOfCheckRun = async (
   v: ListChecksQueryVariables,
   previousCheckSuiteCursor: string,
   currentCheckSuiteCursor: string,
-  previousCheckRunCursor: string,
+  previousCheckRunCursor: string | undefined,
   currentCheckRunCursor: string,
   cumulativeSteps: Steps,
 ): Promise<Steps> => {
@@ -300,31 +301,30 @@ const paginateStepsOfCheckRun = async (
 type Steps = ReturnType<typeof getSteps>
 
 const getSteps = (q: ListChecksQuery, checkSuiteCursor: string, checkRunCursor: string) => {
-  assert(q.repository != null)
-  assert(q.repository.object != null)
-  assert.strictEqual(q.repository.object.__typename, 'Commit')
-  assert(q.repository.object.checkSuites != null)
-  assert(q.repository.object.checkSuites.edges != null)
-  for (const checkSuiteEdge of q.repository.object.checkSuites.edges) {
-    assert(checkSuiteEdge != null)
-    if (checkSuiteEdge.cursor === checkSuiteCursor) {
-      assert(checkSuiteEdge.node != null)
-      assert(checkSuiteEdge.node.checkRuns != null)
-      assert(checkSuiteEdge.node.checkRuns.edges != null)
-      for (const checkRunEdge of checkSuiteEdge.node.checkRuns.edges) {
-        assert(checkRunEdge != null)
-        if (checkRunEdge.cursor === checkRunCursor) {
-          assert(checkRunEdge.node != null)
-          assert(checkRunEdge.node.steps != null)
-          return checkRunEdge.node.steps
-        }
-      }
+  const checkRuns = getCheckRuns(q, checkSuiteCursor)
+  assert(checkRuns.edges != null)
+  for (const checkRunEdge of checkRuns.edges) {
+    assert(checkRunEdge != null)
+    if (checkRunEdge.cursor === checkRunCursor) {
+      assert(checkRunEdge.node != null)
+      assert(checkRunEdge.node.steps != null)
+      return checkRunEdge.node.steps
     }
   }
-  throw new Error(`internal error: no such CheckRun cursor ${checkRunCursor}`)
+  throw new Error(`internal error: no such Step of ${checkSuiteCursor} and ${checkRunCursor}`)
 }
 
 function* previousGenerator<T>(a: T[]): Generator<[T, T]> {
+  for (let i = 1; i < a.length; i++) {
+    yield [a[i - 1], a[i]]
+  }
+}
+
+function* previousGeneratorFromZeroIndex<T>(a: T[]): Generator<[T | undefined, T]> {
+  if (a.length === 0) {
+    return
+  }
+  yield [undefined, a[0]]
   for (let i = 1; i < a.length; i++) {
     yield [a[i - 1], a[i]]
   }
