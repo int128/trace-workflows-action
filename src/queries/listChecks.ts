@@ -136,17 +136,16 @@ const paginateCheckRunsOfCheckSuites = async (
   checkSuites: CheckSuites,
 ) => {
   assert(checkSuites.edges != null)
-  for (const [previousCheckSuite, currentCheckSuite] of previousGenerator(checkSuites.edges)) {
-    assert(previousCheckSuite != null)
-    assert(currentCheckSuite != null)
-    assert(currentCheckSuite.node != null)
-    assert(currentCheckSuite.node.checkRuns != null)
+  for (const checkSuite of previousGenerator(checkSuites.edges)) {
+    assert(checkSuite.current != null)
+    assert(checkSuite.current.node != null)
+    assert(checkSuite.current.node.checkRuns != null)
     await paginateCheckRunsOfCheckSuite(
       fn,
       v,
-      previousCheckSuite.cursor,
-      currentCheckSuite.cursor,
-      currentCheckSuite.node.checkRuns,
+      checkSuite.previous?.cursor,
+      checkSuite.current.cursor,
+      checkSuite.current.node.checkRuns,
     )
   }
 }
@@ -154,7 +153,7 @@ const paginateCheckRunsOfCheckSuites = async (
 const paginateCheckRunsOfCheckSuite = async (
   fn: QueryFunction,
   v: ListChecksQueryVariables,
-  previousCheckSuiteCursor: string,
+  previousCheckSuiteCursor: string | undefined,
   currentCheckSuiteCursor: string,
   cumulativeCheckRuns: CheckRuns,
 ): Promise<void> => {
@@ -196,8 +195,11 @@ const getCheckRuns = (q: ListChecksQuery, checkSuiteCursor: string) => {
   throw new Error(`internal error: no such CheckSuite cursor ${checkSuiteCursor}`)
 }
 
-function* previousGenerator<T>(a: T[]): Generator<[T, T]> {
-  for (let i = 1; i < a.length; i++) {
-    yield [a[i - 1], a[i]]
+function* previousGenerator<T>(a: T[]): Generator<{ previous?: T; current: T }> {
+  for (let i = 0; i < a.length; i++) {
+    if (i === 0) {
+      yield { current: a[i] }
+    }
+    yield { previous: a[i - 1], current: a[i] }
   }
 }
