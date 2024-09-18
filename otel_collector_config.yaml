@@ -12,7 +12,7 @@ processors:
     timeout: 1s
 
 exporters:
-  datadog:
+  datadog/exporter:
     api:
       key: ${env:DD_API_KEY}
 
@@ -22,10 +22,10 @@ connectors:
 service:
   pipelines:
     metrics:
-      receivers: [otlp, datadog/connector]
+      receivers: [otlp]
       processors: [batch]
       exporters: [datadog]
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [datadog/connector]
+      exporters: [datadog/connector, datadog/exporter]
