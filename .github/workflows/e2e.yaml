@@ -31,9 +31,9 @@ jobs:
             --name opentelemetry-collector \
             -p 4318:4318 \
             -e DD_API_KEY \
-            -v $(pwd)/otel_collector_config.yaml:/etc/otelcol-contrib/config.yaml \
+            -v "$(pwd)/otel_collector_config.yaml:/etc/otelcol-contrib/config.yaml" \
             otel/opentelemetry-collector-contrib:0.109.0
-      - run: sleep 5
+      - run: sleep 3
 
       - name: Event
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
@@ -48,6 +48,7 @@ jobs:
         with:
           oltp-endpoint: http://127.0.0.1:4318/v1/traces
 
+      - run: sleep 3
       - run: docker stop opentelemetry-collector
         if: always()
       - run: docker logs opentelemetry-collector
