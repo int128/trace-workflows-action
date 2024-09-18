@@ -1,0 +1,30 @@
+# https://docs.datadoghq.com/opentelemetry/collector_exporter/configuration/
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+processors:
+  batch:
+    send_batch_max_size: 100
+    send_batch_size: 10
+    timeout: 10s
+
+connectors:
+  datadog/connector:
+
+exporters:
+  datadog/exporter:
+    api:
+      site: datadoghq.com
+      key: ${env:DD_API_KEY}
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [datadog/connector, datadog/exporter]
