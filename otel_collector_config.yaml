@@ -12,6 +12,8 @@ exporters:
   datadog:
     api:
       key: ${env:DD_API_KEY}
+  debug:
+    verbosity: detailed
 
 connectors:
     datadog/connector:
