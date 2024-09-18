@@ -8,22 +8,21 @@ receivers:
 processors:
   batch:
 
-connectors:
-  datadog/connector:
-
 exporters:
-  datadog/exporter:
+  datadog:
     api:
-      site: datadoghq.com
       key: ${env:DD_API_KEY}
+
+connectors:
+    datadog/connector:
 
 service:
   pipelines:
+    metrics:
+      receivers: [otlp, datadog/connector]
+      processors: [batch]
+      exporters: [datadog]
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [datadog/connector, datadog/exporter]
-    metrics:
-      receivers: [datadog/connector, otlp]
-      processors: [batch]
-      exporters: [datadog/exporter]
+      exporters: [datadog/connector]
