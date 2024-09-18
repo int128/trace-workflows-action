@@ -34,10 +34,7 @@ jobs:
             -e DD_API_KEY \
             -v $(pwd)/otel_collector_config.yaml:/etc/otelcol-contrib/config.yaml \
             otel/opentelemetry-collector-contrib:0.109.0
-      - name: Wait for otel/opentelemetry-collector-contrib
-        run: |
-          sleep 10
-          docker logs opentelemetry-collector
+      - run: sleep 5
 
       - name: Event
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
@@ -51,3 +48,6 @@ jobs:
       - uses: int128/trace-workflows-action@0385d5edb2409f3fca0c0dc0efd67af724994422 # v0.20.0
         with:
           oltp-endpoint: http://localhost:4318
+
+      - run: docker logs opentelemetry-collector
+        if: always()
