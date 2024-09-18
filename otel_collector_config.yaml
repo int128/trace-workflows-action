@@ -5,10 +5,6 @@ receivers:
       http:
         endpoint: 0.0.0.0:4318
 
-extensions:
-  health_check:
-    endpoint: 0.0.0.0:13133
-
 processors:
   batch:
 

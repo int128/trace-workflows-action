@@ -35,13 +35,9 @@ jobs:
             -v $(pwd)/otel_collector_config.yaml:/etc/otelcol-contrib/config.yaml \
             otel/opentelemetry-collector-contrib:0.109.0
       - name: Wait for otel/opentelemetry-collector-contrib
-        timeout-minutes: 1
         run: |
-          until curl -sfv http://localhost:13133
-          do
-            docker logs opentelemetry-collector
-            sleep 10
-          done
+          sleep 10
+          docker logs opentelemetry-collector
 
       - name: Event
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
