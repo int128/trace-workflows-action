@@ -29,6 +29,7 @@ jobs:
             -q \
             -d \
             --name opentelemetry-collector \
+            --hostname $(hostname) \
             -p 4318:4318 \
             -e DD_API_KEY \
             -v "$(pwd)/otel_collector_config.yaml:/etc/otelcol-contrib/config.yaml" \
