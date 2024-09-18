@@ -9,31 +9,20 @@ processors:
   batch:
     send_batch_max_size: 1000
     send_batch_size: 100
-    timeout: 1s
+    timeout: 2s
 
 exporters:
   datadog:
     api:
       key: ${env:DD_API_KEY}
 
-connectors:
-    datadog/connector:
-
 service:
   pipelines:
     metrics:
-      receivers: [otlp, datadog/connector]
+      receivers: [otlp]
       processors: [batch]
       exporters: [datadog]
     traces:
-      receivers: [otlp]
-      processors: [batch]
-      exporters: [datadog/connector]
-    traces/2:
-      receivers: [datadog/connector]
-      processors: [batch]
-      exporters: [datadog]
-    logs:
       receivers: [otlp]
       processors: [batch]
       exporters: [datadog]
