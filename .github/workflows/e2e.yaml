@@ -19,6 +19,23 @@ jobs:
       actions: read
       checks: read
     steps:
+      # https://docs.datadoghq.com/opentelemetry/collector_exporter/deployment/?tab=dockerlocalhost
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - name: Run otel/opentelemetry-collector-contrib
+        env:
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+        run: |
+          docker run \
+            -q \
+            -d \
+            --name opentelemetry-collector \
+            --hostname $(hostname) \
+            -p 4318:4318 \
+            -e DD_API_KEY \
+            -v "$(pwd)/otel_collector_config.yaml:/etc/otelcol-contrib/config.yaml" \
+            otel/opentelemetry-collector-contrib:0.109.0
+      - run: sleep 3
+
       - name: Event
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
@@ -29,3 +46,11 @@ jobs:
             core.info(`actor=${context.actor}`)
             core.info(`payload=${JSON.stringify(context.payload, undefined, 2)}`)
       - uses: int128/trace-workflows-action@0385d5edb2409f3fca0c0dc0efd67af724994422 # v0.20.0
+        with:
+          oltp-endpoint: http://127.0.0.1:4318/v1/traces
+
+      - run: sleep 3
+      - run: docker stop opentelemetry-collector
+        if: always()
+      - run: docker logs opentelemetry-collector
+        if: always()
