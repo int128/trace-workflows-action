@@ -33,7 +33,7 @@ jobs:
             -v $(pwd)/otel_collector_config.yaml:/etc/otelcol-contrib/config.yaml \
             otel/opentelemetry-collector-contrib:0.109.0
       - name: Wait for otel/opentelemetry-collector-contrib
-        run: until nc -z localhost 4318; do sleep 1; done
+        run: until curl -sfv http://localhost:4318/v1/metrics; do sleep 1; done
         timeout-minutes: 2
 
       - name: Event
