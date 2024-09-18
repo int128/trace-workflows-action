@@ -35,8 +35,9 @@ jobs:
             otel/opentelemetry-collector-contrib:0.109.0
       - name: Wait for otel/opentelemetry-collector-contrib
         timeout-minutes: 2
-        run: \
-          until curl -sfv http://localhost:4318/v1/metrics; do
+        run: |
+          until curl -sfv http://localhost:4318/v1/metrics
+          do
             docker logs opentelemetry-collector
             sleep 10
           one
