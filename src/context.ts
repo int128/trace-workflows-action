@@ -1,3 +1,4 @@
+import * as core from '@actions/core'
 import * as github from '@actions/github'
 
 export type Context = {
@@ -9,6 +10,7 @@ export type Context = {
   pullRequestNumber?: number
   actor: string
   serverUrl: string
+  serverHostname?: string
 }
 
 type WorkflowRunEventPayload = {
@@ -35,8 +37,9 @@ export const getContext = (): Context => {
   const context = {
     owner: github.context.repo.owner,
     repo: github.context.repo.repo,
-    serverUrl: github.context.serverUrl,
     actor: github.context.actor,
+    serverUrl: github.context.serverUrl,
+    serverHostname: getServerHostname(github.context.serverUrl),
   }
 
   if (github.context.eventName === 'workflow_run') {
@@ -74,5 +77,13 @@ export const getContext = (): Context => {
     event: github.context.eventName,
     ref: github.context.ref,
     sha: github.context.sha,
+  }
+}
+
+const getServerHostname = (serverUrl: string): string | undefined => {
+  try {
+    return new URL(serverUrl).hostname
+  } catch (e) {
+    core.warning(`Invalid context.serverUrl: ${serverUrl}: ${String(e)}`)
   }
 }
