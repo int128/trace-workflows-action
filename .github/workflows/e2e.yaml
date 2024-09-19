@@ -19,6 +19,34 @@ jobs:
       actions: read
       checks: read
     steps:
+      - uses: int128/opentelemetry-collector-action@v0
+        with:
+          readiness-probe-port: 13133
+          environments: |
+            DD_API_KEY=${{ secrets.DD_API_KEY }}
+          config: |
+            receivers:
+              otlp:
+                protocols:
+                  http:
+                    endpoint: 0.0.0.0:4318
+            processors:
+              batch:
+            exporters:
+              datadog:
+                api:
+                  key: ${env:DD_API_KEY}
+            extensions:
+              health_check:
+                endpoint: 0.0.0.0:13133
+            service:
+              extensions: [health_check]
+              pipelines:
+                traces:
+                  receivers: [otlp]
+                  processors: [batch]
+                  exporters: [datadog]
+
       - name: Event
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
@@ -29,3 +57,5 @@ jobs:
             core.info(`actor=${context.actor}`)
             core.info(`payload=${JSON.stringify(context.payload, undefined, 2)}`)
       - uses: int128/trace-workflows-action@0385d5edb2409f3fca0c0dc0efd67af724994422 # v0.20.0
+        with:
+          oltp-endpoint: http://127.0.0.1:4318/v1/traces
