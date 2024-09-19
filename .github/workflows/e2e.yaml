@@ -19,7 +19,7 @@ jobs:
       actions: read
       checks: read
     steps:
-      - uses: int128/opentelemetry-collector-action@833f931a603dd95e9dc51a462ccd0fee75e09cb8 # v0.5.0
+      - uses: int128/opentelemetry-collector-action@bff48cd69855003024ecfe5bba54bbbccfd4402d # v0.6.0
         with:
           readiness-probe-port: 13133
           environments: |
@@ -59,4 +59,3 @@ jobs:
       - uses: int128/trace-workflows-action@0385d5edb2409f3fca0c0dc0efd67af724994422 # v0.20.0
         with:
           oltp-endpoint: http://127.0.0.1:4318/v1/traces
-      - run: sleep 5
