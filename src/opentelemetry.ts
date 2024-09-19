@@ -3,6 +3,8 @@ import { NodeSDK } from '@opentelemetry/sdk-node'
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto'
 import { ConsoleSpanExporter, SpanExporter } from '@opentelemetry/sdk-trace-node'
 import { Context } from './context.js'
+import { Resource } from '@opentelemetry/resources'
+import { ATTR_HOST_NAME, ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions/incubating'
 
 type Options = {
   endpoint: string
@@ -12,6 +14,10 @@ type Options = {
 export const withOpenTelemetry = async <T>(opts: Options, f: () => Promise<T>): Promise<T> => {
   const sdk = new NodeSDK({
     traceExporter: getTraceExporter(opts),
+    resource: new Resource({
+      [ATTR_SERVICE_NAME]: 'github-actions',
+      [ATTR_HOST_NAME]: opts.context.serverHostname,
+    }),
   })
   sdk.start()
   try {
@@ -27,7 +33,6 @@ const getTraceExporter = (opts: Options): SpanExporter => {
   if (opts.endpoint) {
     return new OTLPTraceExporter({
       url: opts.endpoint,
-      hostname: opts.context.serverHostname,
     })
   }
   return new ConsoleSpanExporter()

@@ -8,7 +8,6 @@ import {
 import {
   ATTR_DEPLOYMENT_ENVIRONMENT,
   ATTR_DEPLOYMENT_ENVIRONMENT_NAME,
-  ATTR_HOST_NAME,
   ATTR_USER_NAME,
 } from '@opentelemetry/semantic-conventions/incubating'
 import { Context } from './context.js'
@@ -23,7 +22,6 @@ export const exportSpans = (event: WorkflowEvent, context: Context) => {
     [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]: environmentName,
     [ATTR_DEPLOYMENT_ENVIRONMENT]: environmentName,
     [ATTR_USER_NAME]: context.actor,
-    [ATTR_HOST_NAME]: context.serverHostname,
   }
 
   tracer.startActiveSpan(
