@@ -59,4 +59,3 @@ jobs:
       - uses: int128/trace-workflows-action@0385d5edb2409f3fca0c0dc0efd67af724994422 # v0.20.0
         with:
           oltp-endpoint: http://127.0.0.1:4318/v1/traces
-      - run: sleep 5
