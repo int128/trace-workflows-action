@@ -22,6 +22,8 @@ jobs:
       - uses: int128/opentelemetry-collector-action@v0
         with:
           readiness-probe-port: 13133
+          docker-run-flags: |
+            --hostname=github-actions
           environments: |
             DD_API_KEY=${{ secrets.DD_API_KEY }}
           config: |
