@@ -1,4 +1,4 @@
-# https://docs.datadoghq.com/opentelemetry/collector_exporter/configuration/
+# https://opentelemetry.io/docs/collector/configuration/
 receivers:
   otlp:
     protocols:

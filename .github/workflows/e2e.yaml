@@ -21,19 +21,10 @@ jobs:
     steps:
       # https://docs.datadoghq.com/opentelemetry/collector_exporter/deployment/?tab=dockerlocalhost
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-      - name: Run otel/opentelemetry-collector-contrib
+      - run: docker-compose up -d
+        working-directory: e2e
         env:
           DD_API_KEY: ${{ secrets.DD_API_KEY }}
-        run: |
-          docker run \
-            -q \
-            -d \
-            --name opentelemetry-collector \
-            --hostname $(hostname) \
-            -p 4318:4318 \
-            -e DD_API_KEY \
-            -v "$(pwd)/otel_collector_config.yaml:/etc/otelcol-contrib/config.yaml" \
-            otel/opentelemetry-collector-contrib:0.109.0
       - run: sleep 3
 
       - name: Event
@@ -50,7 +41,9 @@ jobs:
           oltp-endpoint: http://127.0.0.1:4318/v1/traces
 
       - run: sleep 3
-      - run: docker stop opentelemetry-collector
+      - run: docker-compose stop
+        working-directory: e2e
         if: always()
-      - run: docker logs opentelemetry-collector
+      - run: docker-compose logs
+        working-directory: e2e
         if: always()

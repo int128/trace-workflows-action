@@ -1,0 +1,9 @@
+services:
+  opentelemetry-collector:
+    image: otel/opentelemetry-collector-contrib:0.109.0
+    ports:
+      - 4318:4318
+    volumes:
+      - ./opentelemetry_collector_config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    environment:
+      - DD_API_KEY
