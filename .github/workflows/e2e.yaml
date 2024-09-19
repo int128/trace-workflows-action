@@ -20,10 +20,10 @@ jobs:
       checks: read
     steps:
       - uses: int128/opentelemetry-collector-action@v0
-        env:
-          DD_API_KEY: ${{ secrets.DD_API_KEY }}
         with:
           readiness-probe-port: 13133
+          environments: |
+            DD_API_KEY=${{ secrets.DD_API_KEY }}
           config: |
             receivers:
               otlp:
