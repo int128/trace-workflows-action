@@ -20,11 +20,7 @@ export const withOpenTelemetry = async <T>(opts: Options, f: () => Promise<T>): 
     resource,
   })
   sdk.start()
-  resource.merge(
-    new Resource({
-      [ATTR_HOST_NAME]: opts.context.serverHostname,
-    }),
-  )
+  resource.attributes[ATTR_HOST_NAME] = opts.context.serverHostname
   try {
     return await f()
   } finally {
