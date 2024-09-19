@@ -2,8 +2,8 @@ import * as core from '@actions/core'
 import * as github from '@actions/github'
 import { summaryListChecksQuery } from './checks.js'
 import { exportSpans } from './span.js'
-import { getContext } from './context.js'
 import { getListChecksQuery } from './queries/listChecks.js'
+import { Context } from './context.js'
 
 // https://api.github.com/apps/github-actions
 const GITHUB_ACTIONS_APP_ID = 15368
@@ -14,8 +14,7 @@ export type Inputs = {
   token: string
 }
 
-export const run = async (inputs: Inputs): Promise<void> => {
-  const context = getContext()
+export const run = async (inputs: Inputs, context: Context): Promise<void> => {
   core.info(`Current context: ${JSON.stringify(context, undefined, 2)}`)
 
   const octokit = github.getOctokit(inputs.token)

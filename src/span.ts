@@ -1,4 +1,3 @@
-import * as core from '@actions/core'
 import * as opentelemetry from '@opentelemetry/api'
 import {
   ATTR_ERROR_TYPE,
@@ -9,7 +8,6 @@ import {
 import {
   ATTR_DEPLOYMENT_ENVIRONMENT,
   ATTR_DEPLOYMENT_ENVIRONMENT_NAME,
-  ATTR_HOST_NAME,
   ATTR_USER_NAME,
 } from '@opentelemetry/semantic-conventions/incubating'
 import { Context } from './context.js'
@@ -24,7 +22,6 @@ export const exportSpans = (event: WorkflowEvent, context: Context) => {
     [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]: environmentName,
     [ATTR_DEPLOYMENT_ENVIRONMENT]: environmentName,
     [ATTR_USER_NAME]: context.actor,
-    [ATTR_HOST_NAME]: getHostname(context),
   }
 
   tracer.startActiveSpan(
@@ -107,14 +104,6 @@ const getEventURL = (context: Context): string => {
     return `${context.serverUrl}/${context.owner}/${context.repo}/pull/${context.pullRequestNumber}`
   }
   return `${context.serverUrl}/${context.owner}/${context.repo}/tree/${context.ref}`
-}
-
-const getHostname = (context: Context): string | undefined => {
-  try {
-    return new URL(context.serverUrl).hostname
-  } catch (e) {
-    core.warning(`Invalid context.serverUrl: ${context.serverUrl}: ${String(e)}`)
-  }
 }
 
 const getStatusCode = (conclusion: CheckConclusionState | null | undefined) => {
