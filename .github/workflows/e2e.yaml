@@ -23,7 +23,8 @@ jobs:
         env:
           DD_API_KEY: ${{ secrets.DD_API_KEY }}
         with:
-          config-yaml: |
+          readiness-probe-port: 13133
+          config: |
             receivers:
               otlp:
                 protocols:
@@ -35,7 +36,11 @@ jobs:
               datadog:
                 api:
                   key: ${env:DD_API_KEY}
+            extensions:
+              health_check:
+                endpoint: 0.0.0.0:13133
             service:
+              extensions: [health_check]
               pipelines:
                 traces:
                   receivers: [otlp]
