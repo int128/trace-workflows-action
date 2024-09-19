@@ -19,7 +19,7 @@ jobs:
       actions: read
       checks: read
     steps:
-      - uses: int128/opentelemetry-collector-action@v0
+      - uses: int128/opentelemetry-collector-action@833f931a603dd95e9dc51a462ccd0fee75e09cb8 # v0.5.0
         with:
           readiness-probe-port: 13133
           environments: |
