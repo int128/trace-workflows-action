@@ -30,6 +30,8 @@ jobs:
                 protocols:
                   http:
                     endpoint: 0.0.0.0:4318
+            processors:
+              batch:
             exporters:
               datadog:
                 api:
@@ -42,6 +44,7 @@ jobs:
               pipelines:
                 traces:
                   receivers: [otlp]
+                  processors: [batch]
                   exporters: [datadog]
 
       - name: Event
