@@ -12,15 +12,15 @@ type Options = {
 }
 
 export const withOpenTelemetry = async <T>(opts: Options, f: () => Promise<T>): Promise<T> => {
-  const resource = new Resource({
-    [ATTR_SERVICE_NAME]: 'github-actions',
-  })
   const sdk = new NodeSDK({
     traceExporter: getTraceExporter(opts),
-    resource,
+    autoDetectResources: false,
+    resource: new Resource({
+      [ATTR_SERVICE_NAME]: 'github-actions',
+      [ATTR_HOST_NAME]: opts.context.serverHostname,
+    }),
   })
   sdk.start()
-  resource.attributes[ATTR_HOST_NAME] = opts.context.serverHostname
   try {
     return await f()
   } finally {
