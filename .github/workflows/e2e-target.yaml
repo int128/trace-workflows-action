@@ -1,4 +1,4 @@
-name: e2e
+name: e2e-target
 
 on:
   workflow_run:
