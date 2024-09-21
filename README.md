@@ -2,6 +2,12 @@
 
 This is an action to export a trace of GitHub Actions workflows to OpenTelemetry.
 
+## Example
+
+Here is an example of trace exported to Datadog APM.
+
+<img width="1100" alt="image" src="https://github.com/user-attachments/assets/f6286a37-dc1e-440e-922e-3d47f0583ac0">
+
 ## Getting Started
 
 This action needs to be run after all workflows are completed.
