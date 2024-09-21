@@ -14,6 +14,9 @@ type Options = {
 export const withOpenTelemetry = async <T>(opts: Options, f: () => Promise<T>): Promise<T> => {
   const sdk = new NodeSDK({
     traceExporter: getTraceExporter(opts),
+    // Exclude the current environment attributes.
+    // This action should be run on workflow_run event,
+    // the current environment does not reflect the target workflows.
     autoDetectResources: false,
     resource: new Resource({
       [ATTR_SERVICE_NAME]: 'github-actions',
