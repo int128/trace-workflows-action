@@ -12,4 +12,4 @@ jobs:
       matrix:
         id: [4, 5]
     steps:
-      - run: date
+      - run: sleep '${{ matrix.id }}'
