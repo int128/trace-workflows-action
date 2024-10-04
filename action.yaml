@@ -6,14 +6,14 @@ inputs:
     description: GitHub Token
     required: true
     default: ${{ github.token }}
-  enable-oltp-exporter:
+  enable-otlp-exporter:
     description: Enable OTLP exporter
     required: false
     default: 'false'
   oltp-endpoint:
     description: If set, export a trace to this endpoint
     required: false
-    deprecationMessage: Use `enable-oltp-exporter` instead
+    deprecationMessage: Use `enable-otlp-exporter` instead
   page-size-of-check-suites:
     description: Page size of CheckSuites query
     required: true
