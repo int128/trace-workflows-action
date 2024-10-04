@@ -7,7 +7,7 @@ import { Resource } from '@opentelemetry/resources'
 import { ATTR_HOST_NAME, ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions/incubating'
 
 type Options = {
-  enableOLTPExporter: boolean
+  enableOTLPExporter: boolean
   endpoint: string // TODO: deprecated
   context: Context
 }
@@ -40,7 +40,7 @@ const getTraceExporter = (opts: Options): SpanExporter => {
       url: opts.endpoint,
     })
   }
-  if (opts.enableOLTPExporter) {
+  if (opts.enableOTLPExporter) {
     return new OTLPTraceExporter()
   }
   return new ConsoleSpanExporter()

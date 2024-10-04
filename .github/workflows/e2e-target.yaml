@@ -71,7 +71,7 @@ jobs:
       - name: Run int128/trace-workflows-action
         uses: ./
         with:
-          enable-oltp-exporter: true
+          enable-otlp-exporter: true
         env:
           OTEL_EXPORTER_OTLP_ENDPOINT: http://127.0.0.1:4318
 
