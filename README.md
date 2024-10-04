@@ -48,7 +48,9 @@ jobs:
     steps:
       - uses: int128/trace-workflows-action@v0
         with:
-          oltp-endpoint: http://opentelemetry-collector:4318/v1/traces
+          enable-oltp-exporter: true
+        env:
+          OTEL_EXPORTER_OTLP_ENDPOINT: http://opentelemetry-collector:4318
 ```
 
 ## Specification
@@ -80,10 +82,13 @@ This action exports the following attributes:
 
 ### Inputs
 
-| Name            | Default value  | Description                             |
-| --------------- | -------------- | --------------------------------------- |
-| `token`         | `github.token` | GitHub token                            |
-| `oltp-endpoint` | -              | If set, export a trace to this endpoint |
+| Name                   | Default value  | Description                      |
+| ---------------------- | -------------- | -------------------------------- |
+| `token`                | `github.token` | GitHub token                     |
+| `enable-oltp-exporter` | false          | If true, export a trace via OLTP |
+
+This action accepts the environment variables for the OTLP exporter.
+See https://opentelemetry.io/docs/languages/sdk-configuration/otlp-exporter/ for details.
 
 ### Outputs
 

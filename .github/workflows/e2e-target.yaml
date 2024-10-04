@@ -71,7 +71,9 @@ jobs:
       - name: Run int128/trace-workflows-action
         uses: ./
         with:
-          oltp-endpoint: http://127.0.0.1:4318/v1/traces
+          enable-oltp-exporter: true
+        env:
+          OTEL_EXPORTER_OTLP_ENDPOINT: http://127.0.0.1:4318
 
       - if: always() && github.event_name == 'workflow_run'
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
