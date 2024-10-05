@@ -20,6 +20,11 @@ export const exportSpans = (event: WorkflowEvent, context: Context) => {
     [ATTR_SERVICE_VERSION]: context.sha,
     [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]: environmentName,
     [ATTR_DEPLOYMENT_ENVIRONMENT]: environmentName,
+    'github.repository': `${context.owner}/${context.repo}`,
+    'github.ref': context.ref,
+    'github.sha': context.sha,
+    'github.actor': context.actor,
+    'github.event.name': context.event,
   }
 
   tracer.startActiveSpan(
@@ -31,11 +36,6 @@ export const exportSpans = (event: WorkflowEvent, context: Context) => {
         ...commonAttributes,
         [ATTR_SERVICE_NAME]: 'github-actions-event',
         [ATTR_URL_FULL]: getEventURL(context),
-        'github.repository': `${context.owner}/${context.repo}`,
-        'github.ref': context.ref,
-        'github.sha': context.sha,
-        'github.actor': context.actor,
-        'github.event.name': context.event,
       },
     },
     (span) => {
