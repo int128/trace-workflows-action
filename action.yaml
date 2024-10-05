@@ -1,14 +1,19 @@
 name: trace-workflows-action
-description: Send a trace of GitHub Actions workflows to OpenTelemetry
+description: Export a trace of GitHub Actions workflows to OpenTelemetry
 
 inputs:
   token:
     description: GitHub Token
     required: true
     default: ${{ github.token }}
-  oltp-endpoint:
-    description: If set, emit a trace to the OpenTelemetry endpoint
+  enable-otlp-exporter:
+    description: Enable OTLP exporter
     required: false
+    default: 'false'
+  oltp-endpoint:
+    description: If set, export a trace to this endpoint
+    required: false
+    deprecationMessage: Use `enable-otlp-exporter` instead
   page-size-of-check-suites:
     description: Page size of CheckSuites query
     required: true

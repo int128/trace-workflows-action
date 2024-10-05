@@ -7,13 +7,17 @@ import { Resource } from '@opentelemetry/resources'
 import { ATTR_HOST_NAME, ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions/incubating'
 
 type Options = {
-  endpoint: string
+  enableOTLPExporter: boolean
+  endpoint: string // TODO: deprecated
   context: Context
 }
 
 export const withOpenTelemetry = async <T>(opts: Options, f: () => Promise<T>): Promise<T> => {
   const sdk = new NodeSDK({
     traceExporter: getTraceExporter(opts),
+    // Exclude the current environment attributes.
+    // This action should be run on workflow_run event,
+    // the current environment does not reflect the target workflows.
     autoDetectResources: false,
     resource: new Resource({
       [ATTR_SERVICE_NAME]: 'github-actions',
@@ -35,6 +39,9 @@ const getTraceExporter = (opts: Options): SpanExporter => {
     return new OTLPTraceExporter({
       url: opts.endpoint,
     })
+  }
+  if (opts.enableOTLPExporter) {
+    return new OTLPTraceExporter()
   }
   return new ConsoleSpanExporter()
 }

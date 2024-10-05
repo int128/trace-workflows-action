@@ -30,17 +30,17 @@ jobs:
             core.info(`actor=${context.actor}`)
             core.info(`payload=${JSON.stringify(context.payload, undefined, 2)}`)
 
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
-      - uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
+      - uses: actions/setup-node@0a44ba7841725637a19e28fa30b79a866c81b0a6 # v4.0.4
         with:
           node-version: 20
       - run: corepack enable pnpm
       - run: pnpm i
       - run: pnpm build
 
-      - uses: int128/opentelemetry-collector-action@bff48cd69855003024ecfe5bba54bbbccfd4402d # v0.6.0
+      - uses: int128/opentelemetry-collector-action@24c5e10daca7d1debb5fe79ad270ae20943a3f30 # v0.10.0
         with:
           readiness-probe-port: 13133
           environments: |
@@ -71,7 +71,9 @@ jobs:
       - name: Run int128/trace-workflows-action
         uses: ./
         with:
-          oltp-endpoint: http://127.0.0.1:4318/v1/traces
+          enable-otlp-exporter: true
+        env:
+          OTEL_EXPORTER_OTLP_ENDPOINT: http://127.0.0.1:4318
 
       - if: always() && github.event_name == 'workflow_run'
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
