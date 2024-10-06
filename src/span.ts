@@ -8,7 +8,6 @@ import {
 import {
   ATTR_DEPLOYMENT_ENVIRONMENT,
   ATTR_DEPLOYMENT_ENVIRONMENT_NAME,
-  ATTR_USER_NAME,
 } from '@opentelemetry/semantic-conventions/incubating'
 import { Context } from './context.js'
 import { WorkflowEvent } from './checks.js'
@@ -21,7 +20,11 @@ export const exportSpans = (event: WorkflowEvent, context: Context) => {
     [ATTR_SERVICE_VERSION]: context.sha,
     [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]: environmentName,
     [ATTR_DEPLOYMENT_ENVIRONMENT]: environmentName,
-    [ATTR_USER_NAME]: context.actor,
+    'github.repository': `${context.owner}/${context.repo}`,
+    'github.ref': context.ref,
+    'github.sha': context.sha,
+    'github.actor': context.actor,
+    'github.event.name': context.event,
   }
 
   tracer.startActiveSpan(
@@ -47,6 +50,7 @@ export const exportSpans = (event: WorkflowEvent, context: Context) => {
                 [ATTR_SERVICE_NAME]: 'github-actions-workflow',
                 [ATTR_ERROR_TYPE]: getErrorType(workflowRun.conclusion),
                 [ATTR_URL_FULL]: workflowRun.url,
+                'github.workflow.name': workflowRun.workflowName,
               },
             },
             (span) => {
@@ -61,6 +65,8 @@ export const exportSpans = (event: WorkflowEvent, context: Context) => {
                         [ATTR_SERVICE_NAME]: 'github-actions-job',
                         [ATTR_ERROR_TYPE]: getErrorType(job.conclusion),
                         [ATTR_URL_FULL]: job.url,
+                        'github.workflow.name': workflowRun.workflowName,
+                        'github.job.name': job.name,
                       },
                     },
                     (span) => {
