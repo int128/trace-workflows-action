@@ -77,8 +77,14 @@ This action exports the following attributes:
 - `service.version`: The target commit SHA.
 - `host.name`: Determined from the GitHub URL, typically `github.com`.
 - `deployment.environment.name`: The target branch name. If a pull request, `pr-` prefix and the number.
-- `user.name`: GitHub user.
 - `url.full`: GitHub URL to the workflow or job.
+- `github.repository`: The repository name.
+- `github.ref`: The target branch name.
+- `github.sha`: The target commit SHA.
+- `github.actor`: The actor who triggered the workflow.
+- `github.event.name`: The event name.
+- `github.workflow.name`: The workflow name.
+- `github.job.name`: The job name.
 
 ### Inputs
 
