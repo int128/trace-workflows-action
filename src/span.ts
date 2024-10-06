@@ -81,6 +81,9 @@ export const exportSpans = (event: WorkflowEvent, context: Context) => {
                                 [ATTR_SERVICE_NAME]: 'github-actions-step',
                                 [ATTR_ERROR_TYPE]: getErrorType(step.conclusion),
                                 [ATTR_URL_FULL]: job.url,
+                                'github.workflow.name': workflowRun.workflowName,
+                                'github.job.name': job.name,
+                                'github.step.name': step.name,
                               },
                             },
                             (span) => {
