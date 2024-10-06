@@ -107,18 +107,21 @@ const createQueryFunction =
 
 export const getListChecksQuery = async (octokit: Octokit, v: ListChecksQueryVariables): Promise<ListChecksQuery> => {
   const fn = createQueryFunction(octokit)
-
   const q = await fn(v)
   const checkSuites = getCheckSuites(q)
-  await paginateCheckSuites(fn, v, checkSuites)
-  core.info(`Fetched all CheckSuites`)
 
-  await paginateCheckRunsOfCheckSuites(fn, v, checkSuites)
-  core.info(`Fetched all CheckRuns`)
-
-  await paginateStepsOfCheckRunsOfCheckSuites(fn, v, checkSuites)
-  core.info(`Fetched all Steps`)
-
+  if (v.firstCheckSuite > 0) {
+    await paginateCheckSuites(fn, v, checkSuites)
+    core.info(`Fetched all CheckSuites`)
+  }
+  if (v.firstCheckRun > 0) {
+    await paginateCheckRunsOfCheckSuites(fn, v, checkSuites)
+    core.info(`Fetched all CheckRuns`)
+  }
+  if (v.firstStep > 0) {
+    await paginateStepsOfCheckRunsOfCheckSuites(fn, v, checkSuites)
+    core.info(`Fetched all Steps`)
+  }
   return q
 }
 
