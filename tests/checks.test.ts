@@ -56,6 +56,27 @@ describe('summaryListChecksQuery', () => {
                           conclusion: CheckConclusionState.Success,
                           startedAt: '2021-08-04T00:00:00Z',
                           completedAt: '2021-08-04T00:01:00Z',
+                          steps: {
+                            __typename: 'CheckStepConnection',
+                            pageInfo: {
+                              endCursor: 'CheckStepCursor',
+                              hasNextPage: false,
+                            },
+                            totalCount: 1,
+                            edges: [
+                              {
+                                cursor: 'CheckStepCursor',
+                                node: {
+                                  __typename: 'CheckStep',
+                                  name: 'build',
+                                  status: CheckStatusState.Completed,
+                                  conclusion: CheckConclusionState.Success,
+                                  startedAt: '2021-08-04T00:00:00Z',
+                                  completedAt: '2021-08-04T00:01:00Z',
+                                },
+                              },
+                            ],
+                          },
                         },
                       },
                     ],
@@ -88,6 +109,15 @@ describe('summaryListChecksQuery', () => {
               conclusion: CheckConclusionState.Success,
               startedAt: new Date('2021-08-04T00:00:00Z'),
               completedAt: new Date('2021-08-04T00:01:00Z'),
+              steps: [
+                {
+                  name: 'build',
+                  status: CheckStatusState.Completed,
+                  conclusion: CheckConclusionState.Success,
+                  startedAt: new Date('2021-08-04T00:00:00Z'),
+                  completedAt: new Date('2021-08-04T00:01:00Z'),
+                },
+              ],
             },
           ],
         },

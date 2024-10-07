@@ -11,6 +11,7 @@ const GITHUB_ACTIONS_APP_ID = 15368
 export type Inputs = {
   pageSizeOfCheckSuites: number
   pageSizeOfCheckRuns: number
+  pageSizeOfSteps: number
   token: string
 }
 
@@ -26,6 +27,7 @@ export const run = async (inputs: Inputs, context: Context): Promise<void> => {
     appId: GITHUB_ACTIONS_APP_ID,
     firstCheckSuite: inputs.pageSizeOfCheckSuites,
     firstCheckRun: inputs.pageSizeOfCheckRuns,
+    firstStep: inputs.pageSizeOfSteps,
   })
   const event = summaryListChecksQuery(listChecksQuery, {
     event: context.event,
