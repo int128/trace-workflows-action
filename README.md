@@ -41,7 +41,7 @@ on:
 
 jobs:
   trace-workflows:
-    # Collect a trace when all workflows are succeeded.
+    # Export a trace when all workflows are succeeded.
     if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -92,6 +92,8 @@ This action exports the following attributes:
 | ---------------------- | -------------- | -------------------------------- |
 | `token`                | `github.token` | GitHub token                     |
 | `enable-otlp-exporter` | false          | If true, export a trace via OTLP |
+
+### Environment variables
 
 This action accepts the environment variables for the OTLP exporter.
 See https://opentelemetry.io/docs/languages/sdk-configuration/otlp-exporter/ for details.

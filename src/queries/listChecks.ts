@@ -192,7 +192,7 @@ const getCheckRuns = (q: ListChecksQuery, checkSuiteCursor: string) => {
       return checkSuiteEdge.node.checkRuns
     }
   }
-  throw new Error(`internal error: no such CheckSuite cursor ${checkSuiteCursor}`)
+  throw new Error(`internal error: no such CheckSuite of ${checkSuiteCursor}`)
 }
 
 function* previousGenerator<T>(a: T[]): Generator<{ previous?: T; current: T }> {
