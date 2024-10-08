@@ -22,10 +22,6 @@ inputs:
     description: Page size of CheckRuns query
     required: true
     default: '100'
-  page-size-of-steps:
-    description: Page size of Steps query (experimental)
-    required: true
-    default: '0'
 
 runs:
   using: 'node20'

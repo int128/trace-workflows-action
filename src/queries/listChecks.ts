@@ -13,8 +13,6 @@ const query = /* GraphQL */ `
     $afterCheckSuite: String
     $firstCheckRun: Int!
     $afterCheckRun: String
-    $firstStep: Int!
-    $afterStep: String
   ) {
     rateLimit {
       cost
@@ -62,23 +60,6 @@ const query = /* GraphQL */ `
                       conclusion
                       startedAt
                       completedAt
-                      steps(first: $firstStep, after: $afterStep) {
-                        totalCount
-                        pageInfo {
-                          hasNextPage
-                          endCursor
-                        }
-                        edges {
-                          cursor
-                          node {
-                            name
-                            status
-                            conclusion
-                            startedAt
-                            completedAt
-                          }
-                        }
-                      }
                     }
                   }
                 }
@@ -107,21 +88,15 @@ const createQueryFunction =
 
 export const getListChecksQuery = async (octokit: Octokit, v: ListChecksQueryVariables): Promise<ListChecksQuery> => {
   const fn = createQueryFunction(octokit)
+
   const q = await fn(v)
   const checkSuites = getCheckSuites(q)
+  await paginateCheckSuites(fn, v, checkSuites)
+  core.info(`Fetched all CheckSuites`)
 
-  if (v.firstCheckSuite > 0) {
-    await paginateCheckSuites(fn, v, checkSuites)
-    core.info(`Fetched all CheckSuites`)
-  }
-  if (v.firstCheckRun > 0) {
-    await paginateCheckRunsOfCheckSuites(fn, v, checkSuites)
-    core.info(`Fetched all CheckRuns`)
-  }
-  if (v.firstStep > 0) {
-    await paginateStepsOfCheckRunsOfCheckSuites(fn, v, checkSuites)
-    core.info(`Fetched all Steps`)
-  }
+  await paginateCheckRunsOfCheckSuites(fn, v, checkSuites)
+  core.info(`Fetched all CheckRuns`)
+
   return q
 }
 
@@ -218,80 +193,6 @@ const getCheckRuns = (q: ListChecksQuery, checkSuiteCursor: string) => {
     }
   }
   throw new Error(`internal error: no such CheckSuite of ${checkSuiteCursor}`)
-}
-
-const paginateStepsOfCheckRunsOfCheckSuites = async (
-  fn: QueryFunction,
-  v: ListChecksQueryVariables,
-  checkSuites: CheckSuites,
-) => {
-  assert(checkSuites.edges != null)
-  for (const checkSuite of previousGenerator(checkSuites.edges)) {
-    assert(checkSuite.current != null)
-    assert(checkSuite.current.node != null)
-    assert(checkSuite.current.node.checkRuns != null)
-    assert(checkSuite.current.node.checkRuns.edges != null)
-    for (const chechRun of previousGenerator(checkSuite.current.node.checkRuns.edges)) {
-      assert(chechRun.current != null)
-      assert(chechRun.current.node != null)
-      assert(chechRun.current.node.steps != null)
-      await paginateStepsOfCheckRun(
-        fn,
-        v,
-        checkSuite.previous?.cursor,
-        checkSuite.current.cursor,
-        chechRun.previous?.cursor,
-        chechRun.current.cursor,
-        chechRun.current.node.steps,
-      )
-    }
-  }
-}
-
-const paginateStepsOfCheckRun = async (
-  fn: QueryFunction,
-  v: ListChecksQueryVariables,
-  previousCheckSuiteCursor: string | undefined, // undefined for the first CheckSuite
-  currentCheckSuiteCursor: string,
-  previousCheckRunCursor: string | undefined, // undefined for the first CheckRun
-  currentCheckRunCursor: string,
-  cumulativeSteps: Steps,
-): Promise<void> => {
-  assert(cumulativeSteps.edges != null)
-  while (cumulativeSteps.pageInfo.hasNextPage) {
-    const nextQuery = await fn({
-      ...v,
-      // Fetch only the current check suite and check run
-      firstCheckSuite: 1,
-      afterCheckSuite: previousCheckSuiteCursor,
-      firstCheckRun: 1,
-      afterCheckRun: previousCheckRunCursor,
-      firstStep: 100,
-      afterStep: cumulativeSteps.pageInfo.endCursor,
-    })
-    const nextSteps = getSteps(nextQuery, currentCheckSuiteCursor, currentCheckRunCursor)
-    assert(nextSteps.edges != null)
-    cumulativeSteps.edges.push(...nextSteps.edges)
-    cumulativeSteps.totalCount = nextSteps.totalCount
-    cumulativeSteps.pageInfo = nextSteps.pageInfo
-    core.info(`Fetched ${cumulativeSteps.edges.length} of ${cumulativeSteps.totalCount} Steps`)
-  }
-}
-
-type Steps = ReturnType<typeof getSteps>
-
-const getSteps = (q: ListChecksQuery, checkSuiteCursor: string, checkRunCursor: string) => {
-  const checkRuns = getCheckRuns(q, checkSuiteCursor)
-  assert(checkRuns.edges != null)
-  for (const checkRunEdge of checkRuns.edges) {
-    assert(checkRunEdge != null)
-    if (checkRunEdge.cursor === checkRunCursor) {
-      assert(checkRunEdge.node != null)
-      assert(checkRunEdge.node.steps != null)
-      return checkRunEdge.node.steps
-    }
-  }
-  throw new Error(`internal error: no such Step of ${checkSuiteCursor} and ${checkRunCursor}`)
 }
 
 function* previousGenerator<T>(a: T[]): Generator<{ previous?: T; current: T }> {

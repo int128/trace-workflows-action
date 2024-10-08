@@ -53,23 +53,6 @@ jobs:
           OTEL_EXPORTER_OTLP_ENDPOINT: http://opentelemetry-collector:4318
 ```
 
-### Export steps (experimental)
-
-By default, this action exports the workflows and jobs.
-
-To export steps of a job,
-
-```yaml
-steps:
-  - uses: int128/trace-workflows-action@v0
-    with:
-      page-size-of-check-suites: 10
-      page-size-of-check-runs: 10
-      page-size-of-steps: 100
-```
-
-Note that this may increase the number of GitHub API requests.
-
 ## Specification
 
 This action fetches the workflows run on the target commit.
