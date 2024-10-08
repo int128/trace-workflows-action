@@ -17,7 +17,6 @@ const main = async () => {
           token: core.getInput('token', { required: true }),
           pageSizeOfCheckSuites: parseInt(core.getInput('page-size-of-check-suites', { required: true })),
           pageSizeOfCheckRuns: parseInt(core.getInput('page-size-of-check-runs', { required: true })),
-          pageSizeOfSteps: parseInt(core.getInput('page-size-of-steps', { required: true })),
         },
         context,
       )

@@ -71,26 +71,6 @@ export const exportSpans = (event: WorkflowEvent, context: Context) => {
                     },
                     (span) => {
                       try {
-                        for (const step of job.steps) {
-                          tracer.startActiveSpan(
-                            step.name,
-                            {
-                              startTime: step.startedAt,
-                              attributes: {
-                                ...commonAttributes,
-                                [ATTR_SERVICE_NAME]: 'github-actions-step',
-                                [ATTR_ERROR_TYPE]: getErrorType(step.conclusion),
-                                [ATTR_URL_FULL]: job.url,
-                                'github.workflow.name': workflowRun.workflowName,
-                                'github.job.name': job.name,
-                                'github.step.name': step.name,
-                              },
-                            },
-                            (span) => {
-                              span.end(step.completedAt)
-                            },
-                          )
-                        }
                         span.setStatus({
                           code: getStatusCode(job.conclusion),
                           message: job.conclusion || undefined,
