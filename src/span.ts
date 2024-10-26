@@ -25,7 +25,7 @@ export const exportSpans = (event: WorkflowEvent, context: Context) => {
     'github.sha': context.sha,
     'github.actor': context.actor,
     'github.event.name': context.event,
-    'github.runAttempt': context.runAttempt,
+    'github.run_attempt': context.runAttempt,
   }
 
   tracer.startActiveSpan(
