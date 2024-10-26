@@ -29,6 +29,9 @@ export type Job = {
   url: string
   status: CheckStatusState
   conclusion: CheckConclusionState | null | undefined
+  runAttempt: number | undefined
+  runnerLabel: string | undefined
+  createdAt: Date
   startedAt: Date
   completedAt: Date
 }
@@ -114,6 +117,9 @@ export const summaryWorkflowJobs = (workflowJobs: github.WorkflowJobs): Job[] =>
       url: workflowJob.html_url,
       status: toCheckStatusState(workflowJob.status),
       conclusion: toCheckConclusionState(workflowJob.conclusion),
+      runAttempt: workflowJob.run_attempt,
+      runnerLabel: workflowJob.labels.at(0),
+      createdAt: new Date(workflowJob.created_at),
       startedAt: new Date(workflowJob.started_at),
       completedAt: new Date(workflowJob.completed_at),
     })

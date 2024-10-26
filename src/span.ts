@@ -59,7 +59,7 @@ export const exportSpans = (event: WorkflowEvent, context: Context) => {
                   tracer.startActiveSpan(
                     job.name,
                     {
-                      startTime: job.startedAt,
+                      startTime: job.createdAt,
                       attributes: {
                         ...commonAttributes,
                         [ATTR_SERVICE_NAME]: 'github-actions-job',
@@ -67,6 +67,8 @@ export const exportSpans = (event: WorkflowEvent, context: Context) => {
                         [ATTR_URL_FULL]: job.url,
                         'github.workflow.name': workflowRun.workflowName,
                         'github.job.name': job.name,
+                        'github.job.run_attempt': job.runAttempt,
+                        'github.job.runner_label': job.runnerLabel,
                       },
                     },
                     (span) => {

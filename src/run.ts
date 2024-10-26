@@ -36,6 +36,7 @@ export const run = async (inputs: Inputs, context: Context): Promise<void> => {
         owner: context.owner,
         repo: context.repo,
         run_id: workflowRunId,
+        filter: 'latest',
       })
       return summaryWorkflowJobs(workflowJobs)
     },

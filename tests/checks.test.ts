@@ -1,4 +1,4 @@
-import { summaryListChecksQuery, WorkflowEvent } from '../src/checks.js'
+import { Job, summaryListChecksQuery, WorkflowEvent } from '../src/checks.js'
 import { CheckConclusionState, CheckStatusState } from '../src/generated/graphql-types.js'
 import { ListChecksQuery } from '../src/generated/graphql.js'
 
@@ -52,14 +52,17 @@ describe('summaryListChecksQuery', () => {
         event: 'push',
       },
       () =>
-        Promise.resolve([
+        Promise.resolve<Job[]>([
           {
             name: 'build',
             url: 'https://github.com/int128/trace-workflows-action/actions/runs/2/job/3',
             status: CheckStatusState.Completed,
             conclusion: CheckConclusionState.Success,
-            startedAt: new Date('2021-08-04T00:00:00Z'),
-            completedAt: new Date('2021-08-04T00:01:00Z'),
+            runAttempt: 1,
+            runnerLabel: 'ubuntu-latest',
+            createdAt: new Date('2021-08-04T00:00:00Z'),
+            startedAt: new Date('2021-08-04T00:01:00Z'),
+            completedAt: new Date('2021-08-04T00:02:00Z'),
           },
         ]),
     )
@@ -72,21 +75,24 @@ describe('summaryListChecksQuery', () => {
           status: CheckStatusState.Completed,
           conclusion: CheckConclusionState.Success,
           createdAt: new Date('2021-08-04T00:00:00Z'),
-          completedAt: new Date('2021-08-04T00:01:00Z'),
+          completedAt: new Date('2021-08-04T00:02:00Z'),
           jobs: [
             {
               name: 'build',
               url: 'https://github.com/int128/trace-workflows-action/actions/runs/2/job/3',
               status: CheckStatusState.Completed,
               conclusion: CheckConclusionState.Success,
-              startedAt: new Date('2021-08-04T00:00:00Z'),
-              completedAt: new Date('2021-08-04T00:01:00Z'),
+              runAttempt: 1,
+              runnerLabel: 'ubuntu-latest',
+              createdAt: new Date('2021-08-04T00:00:00Z'),
+              startedAt: new Date('2021-08-04T00:01:00Z'),
+              completedAt: new Date('2021-08-04T00:02:00Z'),
             },
           ],
         },
       ],
       startedAt: new Date('2021-08-04T00:00:00Z'),
-      completedAt: new Date('2021-08-04T00:01:00Z'),
+      completedAt: new Date('2021-08-04T00:02:00Z'),
     })
   })
 })
