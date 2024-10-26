@@ -7,17 +7,20 @@ export type Context = {
   event: string
   ref: string
   sha: string
+  runAttempt?: number
   pullRequestNumber?: number
   actor: string
   serverUrl: string
   serverHostname?: string
 }
 
+// https://docs.github.com/en/webhooks/webhook-events-and-payloads#workflow_run
 type WorkflowRunEventPayload = {
   workflow_run: {
     event: string
     head_branch: string
     head_sha: string
+    run_attempt: number
     pull_requests: {
       number: number
     }[]
@@ -44,20 +47,13 @@ export const getContext = (): Context => {
 
   if (github.context.eventName === 'workflow_run') {
     const payload = github.context.payload as WorkflowRunEventPayload
-    if (payload.workflow_run.pull_requests.length > 0) {
-      return {
-        ...context,
-        event: payload.workflow_run.event,
-        ref: payload.workflow_run.head_branch,
-        sha: payload.workflow_run.head_sha,
-        pullRequestNumber: payload.workflow_run.pull_requests[0].number,
-      }
-    }
     return {
       ...context,
       event: payload.workflow_run.event,
       ref: payload.workflow_run.head_branch,
       sha: payload.workflow_run.head_sha,
+      runAttempt: payload.workflow_run.run_attempt,
+      pullRequestNumber: payload.workflow_run.pull_requests.at(0)?.number,
     }
   }
 
