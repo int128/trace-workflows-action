@@ -1,5 +1,5 @@
 import * as core from '@actions/core'
-import * as github from '@actions/github'
+import * as github from './github.js'
 import { summaryListChecksQuery } from './checks.js'
 import { exportSpans } from './span.js'
 import { getListChecksQuery } from './queries/listChecks.js'
