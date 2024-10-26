@@ -3,7 +3,7 @@ import { CheckConclusionState, CheckStatusState } from '../src/generated/graphql
 import { ListChecksQuery } from '../src/generated/graphql.js'
 
 describe('summaryListChecksQuery', () => {
-  it('should return a summary of workflow runs', () => {
+  it('should return a summary of workflow runs', async () => {
     const query: ListChecksQuery = {
       __typename: 'Query',
       rateLimit: {
@@ -34,32 +34,11 @@ describe('summaryListChecksQuery', () => {
                       name: 'CI',
                     },
                     url: 'https://github.com/int128/trace-workflows-action/actions/runs/2',
+                    databaseId: 2,
                   },
                   createdAt: '2021-08-04T00:00:00Z',
                   status: CheckStatusState.Completed,
                   conclusion: CheckConclusionState.Success,
-                  checkRuns: {
-                    __typename: 'CheckRunConnection',
-                    pageInfo: {
-                      endCursor: 'CheckRunCursor',
-                      hasNextPage: false,
-                    },
-                    totalCount: 1,
-                    edges: [
-                      {
-                        cursor: 'CheckRunCursor',
-                        node: {
-                          __typename: 'CheckRun',
-                          databaseId: 3,
-                          name: 'build',
-                          status: CheckStatusState.Completed,
-                          conclusion: CheckConclusionState.Success,
-                          startedAt: '2021-08-04T00:00:00Z',
-                          completedAt: '2021-08-04T00:01:00Z',
-                        },
-                      },
-                    ],
-                  },
                 },
               },
             ],
@@ -67,9 +46,23 @@ describe('summaryListChecksQuery', () => {
         },
       },
     }
-    const event = summaryListChecksQuery(query, {
-      event: 'push',
-    })
+    const event = await summaryListChecksQuery(
+      query,
+      {
+        event: 'push',
+      },
+      () =>
+        Promise.resolve([
+          {
+            name: 'build',
+            url: 'https://github.com/int128/trace-workflows-action/actions/runs/2/job/3',
+            status: CheckStatusState.Completed,
+            conclusion: CheckConclusionState.Success,
+            startedAt: new Date('2021-08-04T00:00:00Z'),
+            completedAt: new Date('2021-08-04T00:01:00Z'),
+          },
+        ]),
+    )
     expect(event).toEqual<WorkflowEvent>({
       workflowRuns: [
         {
