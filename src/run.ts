@@ -1,6 +1,6 @@
 import * as core from '@actions/core'
-import * as github from '@actions/github'
-import { summaryListChecksQuery } from './checks.js'
+import * as github from './github.js'
+import { summaryListChecksQuery, summaryWorkflowJobs } from './checks.js'
 import { exportSpans } from './span.js'
 import { getListChecksQuery } from './queries/listChecks.js'
 import { Context } from './context.js'
@@ -25,11 +25,22 @@ export const run = async (inputs: Inputs, context: Context): Promise<void> => {
     oid: context.sha,
     appId: GITHUB_ACTIONS_APP_ID,
     firstCheckSuite: inputs.pageSizeOfCheckSuites,
-    firstCheckRun: inputs.pageSizeOfCheckRuns,
   })
-  const event = summaryListChecksQuery(listChecksQuery, {
-    event: context.event,
-  })
+  const event = await summaryListChecksQuery(
+    listChecksQuery,
+    {
+      event: context.event,
+    },
+    async (workflowRunId: number) => {
+      const workflowJobs = await github.listJobsForWorkflowRun(octokit, {
+        owner: context.owner,
+        repo: context.repo,
+        run_id: workflowRunId,
+      })
+      return summaryWorkflowJobs(workflowJobs)
+    },
+  )
+
   core.startGroup('Event')
   core.info(JSON.stringify(event, undefined, 2))
   core.endGroup()

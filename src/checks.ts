@@ -1,4 +1,5 @@
 import assert from 'assert'
+import * as github from './github.js'
 import { ListChecksQuery } from './generated/graphql.js'
 import { CheckConclusionState, CheckStatusState } from './generated/graphql-types.js'
 
@@ -32,7 +33,13 @@ export type Job = {
   completedAt: Date
 }
 
-export const summaryListChecksQuery = (q: ListChecksQuery, filter: Filter): WorkflowEvent => {
+type JobsProvider = (workflowRunId: number) => Promise<Job[]>
+
+export const summaryListChecksQuery = async (
+  q: ListChecksQuery,
+  filter: Filter,
+  jobsProvider: JobsProvider,
+): Promise<WorkflowEvent> => {
   assert(q.rateLimit != null)
   assert(q.repository != null)
   assert(q.repository.object != null)
@@ -46,33 +53,13 @@ export const summaryListChecksQuery = (q: ListChecksQuery, filter: Filter): Work
     const checkSuite = checkSuiteEdge.node
     assert(checkSuite != null)
     assert(checkSuite.workflowRun != null)
-    assert(checkSuite.checkRuns != null)
-    assert(checkSuite.checkRuns.edges != null)
     if (checkSuite.workflowRun.event !== filter.event) {
       continue
     }
-
-    const jobs: Job[] = []
-    for (const checkRunEdge of checkSuite.checkRuns.edges) {
-      assert(checkRunEdge != null)
-      const checkRun = checkRunEdge.node
-      assert(checkRun != null)
-      if (checkRun.startedAt == null || checkRun.completedAt == null) {
-        continue
-      }
-      if (checkRun.conclusion === CheckConclusionState.Skipped) {
-        continue
-      }
-      jobs.push({
-        name: checkRun.name,
-        url: `${checkSuite.workflowRun.url}/job/${checkRun.databaseId}`,
-        status: checkRun.status,
-        conclusion: checkRun.conclusion,
-        startedAt: new Date(checkRun.startedAt),
-        completedAt: new Date(checkRun.completedAt),
-      })
+    if (checkSuite.workflowRun.databaseId == null) {
+      continue
     }
-
+    const jobs = await jobsProvider(checkSuite.workflowRun.databaseId)
     const completedAt = maxDate(jobs.map((job) => job.completedAt))
     if (completedAt == null) {
       continue
@@ -107,5 +94,63 @@ const maxDate = (a: Date[]): Date | undefined => {
   const ts = a.map((x) => x.getTime())
   if (ts.length > 0) {
     return new Date(Math.max(...ts))
+  }
+}
+
+export const summaryWorkflowJobs = (workflowJobs: github.WorkflowJobs): Job[] => {
+  const jobs: Job[] = []
+  for (const workflowJob of workflowJobs) {
+    if (workflowJob.html_url === null) {
+      continue
+    }
+    if (workflowJob.completed_at === null) {
+      continue
+    }
+    if (workflowJob.conclusion === 'skipped') {
+      continue
+    }
+    jobs.push({
+      name: workflowJob.name,
+      url: workflowJob.html_url,
+      status: toCheckStatusState(workflowJob.status),
+      conclusion: toCheckConclusionState(workflowJob.conclusion),
+      startedAt: new Date(workflowJob.started_at),
+      completedAt: new Date(workflowJob.completed_at),
+    })
+  }
+  return jobs
+}
+
+const toCheckStatusState = (status: github.WorkflowJob['status']): CheckStatusState => {
+  switch (status) {
+    case 'completed':
+      return CheckStatusState.Completed
+    case 'in_progress':
+      return CheckStatusState.InProgress
+    case 'queued':
+      return CheckStatusState.Queued
+    case 'waiting':
+      return CheckStatusState.Waiting
+  }
+}
+
+const toCheckConclusionState = (conclusion: github.WorkflowJob['conclusion']): CheckConclusionState | null => {
+  switch (conclusion) {
+    case 'success':
+      return CheckConclusionState.Success
+    case 'failure':
+      return CheckConclusionState.Failure
+    case 'neutral':
+      return CheckConclusionState.Neutral
+    case 'cancelled':
+      return CheckConclusionState.Cancelled
+    case 'skipped':
+      return CheckConclusionState.Skipped
+    case 'timed_out':
+      return CheckConclusionState.TimedOut
+    case 'action_required':
+      return CheckConclusionState.ActionRequired
+    case null:
+      return null
   }
 }
