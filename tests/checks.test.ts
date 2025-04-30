@@ -1,7 +1,7 @@
 import { describe } from 'vitest'
 import { it } from 'vitest'
 import { expect } from 'vitest'
-import { Job, summaryListChecksQuery, WorkflowEvent } from '../src/checks.js'
+import { summaryListChecksQuery, WorkflowEvent, WorkflowJobsProvider } from '../src/checks.js'
 import { CheckConclusionState, CheckStatusState } from '../src/generated/graphql-types.js'
 import { ListChecksQuery } from '../src/generated/graphql.js'
 
@@ -49,26 +49,21 @@ describe('summaryListChecksQuery', () => {
         },
       },
     }
-    const event = await summaryListChecksQuery(
-      query,
-      {
-        event: 'push',
-      },
-      () =>
-        Promise.resolve<Job[]>([
-          {
-            name: 'build',
-            url: 'https://github.com/int128/trace-workflows-action/actions/runs/2/job/3',
-            status: CheckStatusState.Completed,
-            conclusion: CheckConclusionState.Success,
-            runAttempt: 1,
-            runnerLabel: 'ubuntu-latest',
-            createdAt: new Date('2021-08-04T00:00:00Z'),
-            startedAt: new Date('2021-08-04T00:01:00Z'),
-            completedAt: new Date('2021-08-04T00:02:00Z'),
-          },
-        ]),
-    )
+    const workflowJobsProvider: WorkflowJobsProvider = () =>
+      Promise.resolve([
+        {
+          name: 'build',
+          status: 'completed',
+          conclusion: 'success',
+          html_url: 'https://github.com/int128/trace-workflows-action/actions/runs/2/job/3',
+          run_attempt: 1,
+          labels: ['ubuntu-latest'],
+          created_at: '2021-08-04T00:00:00Z',
+          started_at: '2021-08-04T00:01:00Z',
+          completed_at: '2021-08-04T00:02:00Z',
+        },
+      ])
+    const event = await summaryListChecksQuery(query, { event: 'push' }, workflowJobsProvider)
     expect(event).toEqual<WorkflowEvent>({
       workflowRuns: [
         {
@@ -83,8 +78,8 @@ describe('summaryListChecksQuery', () => {
             {
               name: 'build',
               url: 'https://github.com/int128/trace-workflows-action/actions/runs/2/job/3',
-              status: CheckStatusState.Completed,
-              conclusion: CheckConclusionState.Success,
+              status: 'completed',
+              conclusion: 'success',
               runAttempt: 1,
               runnerLabel: 'ubuntu-latest',
               createdAt: new Date('2021-08-04T00:00:00Z'),

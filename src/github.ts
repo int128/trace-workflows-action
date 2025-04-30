@@ -6,15 +6,6 @@ import { retry } from '@octokit/plugin-retry'
 
 export const getOctokit = () => new (Octokit.plugin(retry))()
 
-export const listJobsForWorkflowRun = async (
-  octokit: Octokit,
-  params: NonNullable<Parameters<typeof octokit.rest.actions.listJobsForWorkflowRun>[0]>,
-) => await octokit.paginate(octokit.rest.actions.listJobsForWorkflowRun, params)
-
-export type WorkflowJobs = Awaited<ReturnType<typeof listJobsForWorkflowRun>>
-
-export type WorkflowJob = WorkflowJobs[0]
-
 export type Context = BaseContext & {
   target: TargetContext
 }

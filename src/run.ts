@@ -1,6 +1,6 @@
 import * as core from '@actions/core'
 import * as github from './github.js'
-import { summaryListChecksQuery, summaryWorkflowJobs } from './checks.js'
+import { summaryListChecksQuery } from './checks.js'
 import { exportSpans } from './span.js'
 import { getListChecksQuery } from './queries/listChecks.js'
 import { Octokit } from '@octokit/action'
@@ -27,17 +27,15 @@ export const run = async (inputs: Inputs, octokit: Octokit, context: github.Cont
     {
       event: context.target.eventName,
     },
-    async (workflowRunId: number) => {
-      core.startGroup(`listJobsForWorkflowRun(${workflowRunId})`)
-      const workflowJobs = await github.listJobsForWorkflowRun(octokit, {
-        owner: context.repo.owner,
-        repo: context.repo.repo,
-        run_id: workflowRunId,
-        filter: 'latest',
-      })
-      core.endGroup()
-      return summaryWorkflowJobs(workflowJobs)
-    },
+    async (workflowRunId: number) =>
+      core.group(`listJobsForWorkflowRun(${workflowRunId})`, async () =>
+        octokit.paginate(octokit.rest.actions.listJobsForWorkflowRun, {
+          owner: context.repo.owner,
+          repo: context.repo.repo,
+          run_id: workflowRunId,
+          filter: 'latest',
+        }),
+      ),
   )
 
   core.startGroup('Event')

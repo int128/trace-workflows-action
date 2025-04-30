@@ -1,6 +1,6 @@
 import assert from 'assert'
-import * as github from './github.js'
 import { ListChecksQuery } from './generated/graphql.js'
+import { Octokit } from '@octokit/action'
 import { CheckConclusionState, CheckStatusState } from './generated/graphql-types.js'
 
 export type Filter = {
@@ -27,8 +27,8 @@ export type WorkflowRun = {
 export type Job = {
   name: string
   url: string
-  status: CheckStatusState
-  conclusion: CheckConclusionState | null | undefined
+  status: ListJobsForWorkflowRunResult['status']
+  conclusion: ListJobsForWorkflowRunResult['conclusion']
   runAttempt: number | undefined
   runnerLabel: string | undefined
   createdAt: Date
@@ -36,12 +36,25 @@ export type Job = {
   completedAt: Date
 }
 
-type JobsProvider = (workflowRunId: number) => Promise<Job[]>
+type ListJobsForWorkflowRunResult = Pick<
+  Awaited<ReturnType<Octokit['rest']['actions']['listJobsForWorkflowRun']>>['data']['jobs'][number],
+  | 'name'
+  | 'status'
+  | 'conclusion'
+  | 'html_url'
+  | 'run_attempt'
+  | 'labels'
+  | 'created_at'
+  | 'started_at'
+  | 'completed_at'
+>
+
+export type WorkflowJobsProvider = (workflowRunId: number) => Promise<ListJobsForWorkflowRunResult[]>
 
 export const summaryListChecksQuery = async (
   q: ListChecksQuery,
   filter: Filter,
-  jobsProvider: JobsProvider,
+  workflowJobsProvider: WorkflowJobsProvider,
 ): Promise<WorkflowEvent> => {
   assert(q.rateLimit != null)
   assert(q.repository != null)
@@ -62,7 +75,31 @@ export const summaryListChecksQuery = async (
     if (checkSuite.workflowRun.databaseId == null) {
       continue
     }
-    const jobs = await jobsProvider(checkSuite.workflowRun.databaseId)
+
+    const workflowJobs = await workflowJobsProvider(checkSuite.workflowRun.databaseId)
+    const jobs: Job[] = []
+    for (const workflowJob of workflowJobs) {
+      if (workflowJob.html_url === null) {
+        continue
+      }
+      if (workflowJob.completed_at === null) {
+        continue
+      }
+      if (workflowJob.conclusion === 'skipped') {
+        continue
+      }
+      jobs.push({
+        name: workflowJob.name,
+        url: workflowJob.html_url,
+        status: workflowJob.status,
+        conclusion: workflowJob.conclusion,
+        runAttempt: workflowJob.run_attempt,
+        runnerLabel: workflowJob.labels.at(0),
+        createdAt: new Date(workflowJob.created_at),
+        startedAt: new Date(workflowJob.started_at),
+        completedAt: new Date(workflowJob.completed_at),
+      })
+    }
     const completedAt = maxDate(jobs.map((job) => job.completedAt))
     if (completedAt == null) {
       continue
@@ -97,70 +134,5 @@ const maxDate = (a: Date[]): Date | undefined => {
   const ts = a.map((x) => x.getTime())
   if (ts.length > 0) {
     return new Date(Math.max(...ts))
-  }
-}
-
-export const summaryWorkflowJobs = (workflowJobs: github.WorkflowJobs): Job[] => {
-  const jobs: Job[] = []
-  for (const workflowJob of workflowJobs) {
-    if (workflowJob.html_url === null) {
-      continue
-    }
-    if (workflowJob.completed_at === null) {
-      continue
-    }
-    if (workflowJob.conclusion === 'skipped') {
-      continue
-    }
-    jobs.push({
-      name: workflowJob.name,
-      url: workflowJob.html_url,
-      status: toCheckStatusState(workflowJob.status),
-      conclusion: toCheckConclusionState(workflowJob.conclusion),
-      runAttempt: workflowJob.run_attempt,
-      runnerLabel: workflowJob.labels.at(0),
-      createdAt: new Date(workflowJob.created_at),
-      startedAt: new Date(workflowJob.started_at),
-      completedAt: new Date(workflowJob.completed_at),
-    })
-  }
-  return jobs
-}
-
-const toCheckStatusState = (status: github.WorkflowJob['status']): CheckStatusState => {
-  switch (status) {
-    case 'completed':
-      return CheckStatusState.Completed
-    case 'in_progress':
-      return CheckStatusState.InProgress
-    case 'queued':
-      return CheckStatusState.Queued
-    case 'waiting':
-      return CheckStatusState.Waiting
-    case 'requested':
-      return CheckStatusState.Requested
-    case 'pending':
-      return CheckStatusState.Pending
-  }
-}
-
-const toCheckConclusionState = (conclusion: github.WorkflowJob['conclusion']): CheckConclusionState | null => {
-  switch (conclusion) {
-    case 'success':
-      return CheckConclusionState.Success
-    case 'failure':
-      return CheckConclusionState.Failure
-    case 'neutral':
-      return CheckConclusionState.Neutral
-    case 'cancelled':
-      return CheckConclusionState.Cancelled
-    case 'skipped':
-      return CheckConclusionState.Skipped
-    case 'timed_out':
-      return CheckConclusionState.TimedOut
-    case 'action_required':
-      return CheckConclusionState.ActionRequired
-    case null:
-      return null
   }
 }

@@ -10,7 +10,7 @@ import {
   ATTR_DEPLOYMENT_ENVIRONMENT_NAME,
 } from '@opentelemetry/semantic-conventions/incubating'
 import { Context } from './github.js'
-import { WorkflowEvent } from './checks.js'
+import { Job, WorkflowEvent } from './checks.js'
 import { CheckConclusionState } from './generated/graphql-types.js'
 
 export const exportSpans = (event: WorkflowEvent, context: Context) => {
@@ -115,23 +115,24 @@ const getEventURL = (context: Context): string => {
   return `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/tree/${context.target.ref}`
 }
 
-const getStatusCode = (conclusion: CheckConclusionState | null | undefined) => {
-  switch (conclusion) {
-    case CheckConclusionState.Failure:
-    case CheckConclusionState.StartupFailure:
-    case CheckConclusionState.TimedOut:
-    case CheckConclusionState.Cancelled:
-      return opentelemetry.SpanStatusCode.ERROR
+const getStatusCode = (conclusion: CheckConclusionState | null | undefined | Job['conclusion']) => {
+  if (isErrorConclusion(conclusion)) {
+    return opentelemetry.SpanStatusCode.ERROR
   }
   return opentelemetry.SpanStatusCode.OK
 }
 
-const getErrorType = (conclusion: CheckConclusionState | null | undefined) => {
-  switch (conclusion) {
-    case CheckConclusionState.Failure:
-    case CheckConclusionState.StartupFailure:
-    case CheckConclusionState.TimedOut:
-    case CheckConclusionState.Cancelled:
-      return conclusion
+const getErrorType = (conclusion: CheckConclusionState | null | undefined | Job['conclusion']) => {
+  if (isErrorConclusion(conclusion)) {
+    return conclusion
   }
 }
+
+const isErrorConclusion = (conclusion: CheckConclusionState | null | undefined | Job['conclusion']) =>
+  conclusion === CheckConclusionState.Failure ||
+  conclusion === CheckConclusionState.StartupFailure ||
+  conclusion === CheckConclusionState.TimedOut ||
+  conclusion === CheckConclusionState.Cancelled ||
+  conclusion === 'failure' ||
+  conclusion === 'timed_out' ||
+  conclusion === 'cancelled'
