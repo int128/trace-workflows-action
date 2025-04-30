@@ -10,7 +10,7 @@ import {
   ATTR_DEPLOYMENT_ENVIRONMENT_NAME,
 } from '@opentelemetry/semantic-conventions/incubating'
 import { Context } from './github.js'
-import { Job, WorkflowEvent } from './checks.js'
+import { WorkflowEvent } from './checks.js'
 import { CheckConclusionState } from './generated/graphql-types.js'
 
 export const exportSpans = (event: WorkflowEvent, context: Context) => {
@@ -74,6 +74,32 @@ export const exportSpans = (event: WorkflowEvent, context: Context) => {
                     },
                     (span) => {
                       try {
+                        for (const step of job.steps) {
+                          tracer.startActiveSpan(
+                            step.name,
+                            {
+                              startTime: step.startedAt,
+                              attributes: {
+                                ...commonAttributes,
+                                [ATTR_SERVICE_NAME]: 'github-actions-step',
+                                [ATTR_ERROR_TYPE]: getErrorType(step.conclusion),
+                                'github.workflow.name': workflowRun.workflowName,
+                                'github.job.name': job.name,
+                                'github.step.name': step.name,
+                              },
+                            },
+                            (span) => {
+                              try {
+                                span.setStatus({
+                                  code: getStatusCode(step.conclusion),
+                                  message: step.conclusion,
+                                })
+                              } finally {
+                                span.end(step.completedAt)
+                              }
+                            },
+                          )
+                        }
                         span.setStatus({
                           code: getStatusCode(job.conclusion),
                           message: job.conclusion || undefined,
@@ -115,20 +141,20 @@ const getEventURL = (context: Context): string => {
   return `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/tree/${context.target.ref}`
 }
 
-const getStatusCode = (conclusion: CheckConclusionState | null | undefined | Job['conclusion']) => {
+const getStatusCode = (conclusion: string | null | undefined) => {
   if (isErrorConclusion(conclusion)) {
     return opentelemetry.SpanStatusCode.ERROR
   }
   return opentelemetry.SpanStatusCode.OK
 }
 
-const getErrorType = (conclusion: CheckConclusionState | null | undefined | Job['conclusion']) => {
+const getErrorType = (conclusion: string | null | undefined) => {
   if (isErrorConclusion(conclusion)) {
     return conclusion
   }
 }
 
-const isErrorConclusion = (conclusion: CheckConclusionState | null | undefined | Job['conclusion']) =>
+const isErrorConclusion = (conclusion: string | null | undefined) =>
   conclusion === CheckConclusionState.Failure ||
   conclusion === CheckConclusionState.StartupFailure ||
   conclusion === CheckConclusionState.TimedOut ||

@@ -61,6 +61,16 @@ describe('summaryListChecksQuery', () => {
           created_at: '2021-08-04T00:00:00Z',
           started_at: '2021-08-04T00:01:00Z',
           completed_at: '2021-08-04T00:02:00Z',
+          steps: [
+            {
+              number: 1,
+              name: 'build',
+              status: 'completed',
+              conclusion: 'success',
+              started_at: '2021-08-04T00:01:00Z',
+              completed_at: '2021-08-04T00:02:00Z',
+            },
+          ],
         },
       ])
     const event = await summaryListChecksQuery(query, { event: 'push' }, workflowJobsProvider)
@@ -85,6 +95,15 @@ describe('summaryListChecksQuery', () => {
               createdAt: new Date('2021-08-04T00:00:00Z'),
               startedAt: new Date('2021-08-04T00:01:00Z'),
               completedAt: new Date('2021-08-04T00:02:00Z'),
+              steps: [
+                {
+                  name: 'build',
+                  status: 'completed',
+                  conclusion: 'success',
+                  startedAt: new Date('2021-08-04T00:01:00Z'),
+                  completedAt: new Date('2021-08-04T00:02:00Z'),
+                },
+              ],
             },
           ],
         },

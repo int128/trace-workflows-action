@@ -34,6 +34,15 @@ export type Job = {
   createdAt: Date
   startedAt: Date
   completedAt: Date
+  steps: Step[]
+}
+
+export type Step = {
+  name: string
+  status: string
+  conclusion: string
+  startedAt: Date
+  completedAt: Date
 }
 
 type ListJobsForWorkflowRunResult = Pick<
@@ -47,6 +56,7 @@ type ListJobsForWorkflowRunResult = Pick<
   | 'created_at'
   | 'started_at'
   | 'completed_at'
+  | 'steps'
 >
 
 export type WorkflowJobsProvider = (workflowRunId: number) => Promise<ListJobsForWorkflowRunResult[]>
@@ -88,6 +98,27 @@ export const summaryListChecksQuery = async (
       if (workflowJob.conclusion === 'skipped') {
         continue
       }
+
+      const steps: Step[] = []
+      for (const step of workflowJob.steps ?? []) {
+        if (step.started_at == null) {
+          continue
+        }
+        if (step.completed_at == null) {
+          continue
+        }
+        if (step.conclusion === null) {
+          continue
+        }
+        steps.push({
+          name: step.name,
+          status: step.status,
+          conclusion: step.conclusion,
+          startedAt: new Date(step.started_at),
+          completedAt: new Date(step.completed_at),
+        })
+      }
+
       jobs.push({
         name: workflowJob.name,
         url: workflowJob.html_url,
@@ -98,8 +129,10 @@ export const summaryListChecksQuery = async (
         createdAt: new Date(workflowJob.created_at),
         startedAt: new Date(workflowJob.started_at),
         completedAt: new Date(workflowJob.completed_at),
+        steps,
       })
     }
+
     const completedAt = maxDate(jobs.map((job) => job.completedAt))
     if (completedAt == null) {
       continue
