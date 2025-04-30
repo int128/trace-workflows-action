@@ -137,6 +137,10 @@ const toCheckStatusState = (status: github.WorkflowJob['status']): CheckStatusSt
       return CheckStatusState.Queued
     case 'waiting':
       return CheckStatusState.Waiting
+    case 'requested':
+      return CheckStatusState.Requested
+    case 'pending':
+      return CheckStatusState.Pending
   }
 }
 

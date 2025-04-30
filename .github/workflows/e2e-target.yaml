@@ -33,14 +33,14 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
-      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20
-      - run: corepack enable pnpm
+      - run: npm install -g pnpm@latest-10
       - run: pnpm i
       - run: pnpm build
 
-      - uses: int128/opentelemetry-collector-action@6f6eaddd596282c2124c1e22c5854125a99b2d2b # v0.12.0
+      - uses: int128/opentelemetry-collector-action@d9d9e888af4692e6b60bc5851011d3659a75ccbf # v0.27.0
         with:
           readiness-probe-port: 13133
           environments: |

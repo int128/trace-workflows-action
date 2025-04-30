@@ -9,7 +9,7 @@ import {
   ATTR_DEPLOYMENT_ENVIRONMENT,
   ATTR_DEPLOYMENT_ENVIRONMENT_NAME,
 } from '@opentelemetry/semantic-conventions/incubating'
-import { Context } from './context.js'
+import { Context } from './github.js'
 import { WorkflowEvent } from './checks.js'
 import { CheckConclusionState } from './generated/graphql-types.js'
 
@@ -17,18 +17,19 @@ export const exportSpans = (event: WorkflowEvent, context: Context) => {
   const tracer = opentelemetry.trace.getTracer('trace-workflows-action')
   const environmentName = getEnvironmentName(context)
   const commonAttributes = {
-    [ATTR_SERVICE_VERSION]: context.sha,
+    [ATTR_SERVICE_VERSION]: context.target.sha,
     [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]: environmentName,
     [ATTR_DEPLOYMENT_ENVIRONMENT]: environmentName,
-    'github.repository': `${context.owner}/${context.repo}`,
-    'github.ref': context.ref,
-    'github.sha': context.sha,
+    'github.repository': `${context.repo.owner}/${context.repo.repo}`,
+    'github.ref': context.target.ref,
+    'github.sha': context.target.sha,
     'github.actor': context.actor,
-    'github.event.name': context.event,
+    'github.event.name': context.target.eventName,
+    'github.run_attempt': context.target.runAttempt,
   }
 
   tracer.startActiveSpan(
-    `${context.owner}/${context.repo}:${context.event}:${context.ref}`,
+    `${context.repo.owner}/${context.repo.repo}:${context.target.eventName}:${context.target.ref}`,
     {
       root: true,
       startTime: event.startedAt,
@@ -101,17 +102,17 @@ export const exportSpans = (event: WorkflowEvent, context: Context) => {
 }
 
 const getEnvironmentName = (context: Context): string => {
-  if (context.pullRequestNumber) {
-    return `pr-${context.pullRequestNumber}`
+  if (context.target.pullRequestNumber) {
+    return `pr-${context.target.pullRequestNumber}`
   }
-  return context.ref.replace(/refs\/(heads|tags)\//, '')
+  return context.target.ref.replace(/refs\/(heads|tags)\//, '')
 }
 
 const getEventURL = (context: Context): string => {
-  if (context.pullRequestNumber) {
-    return `${context.serverUrl}/${context.owner}/${context.repo}/pull/${context.pullRequestNumber}`
+  if (context.target.pullRequestNumber) {
+    return `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/pull/${context.target.pullRequestNumber}`
   }
-  return `${context.serverUrl}/${context.owner}/${context.repo}/tree/${context.ref}`
+  return `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/tree/${context.target.ref}`
 }
 
 const getStatusCode = (conclusion: CheckConclusionState | null | undefined) => {

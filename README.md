@@ -83,6 +83,9 @@ This action exports the following attributes:
 - `github.sha`: The target commit SHA.
 - `github.actor`: The actor who triggered the workflow.
 - `github.event.name`: The event name.
+- `github.run_attempt`: Attempt number of the workflow run.
+  It is 1 for the first run.
+  This attribute is available only if this action is called on workflow_run event.
 - `github.workflow.name`: The workflow name.
 - `github.job.name`: The job name.
 
