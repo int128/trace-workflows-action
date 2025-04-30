@@ -8,7 +8,6 @@ const main = async () => {
   await withOpenTelemetry(
     {
       enableOTLPExporter: core.getBooleanInput('enable-otlp-exporter'),
-      endpoint: core.getInput('oltp-endpoint'), // TODO: deprecated
       context,
     },
     async () => {

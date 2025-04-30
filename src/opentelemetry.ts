@@ -8,7 +8,6 @@ import { ATTR_HOST_NAME, ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conve
 
 type Options = {
   enableOTLPExporter: boolean
-  endpoint: string // TODO: deprecated
   context: Context
 }
 
@@ -35,11 +34,6 @@ export const withOpenTelemetry = async <T>(opts: Options, f: () => Promise<T>): 
 }
 
 const getTraceExporter = (opts: Options): SpanExporter => {
-  if (opts.endpoint) {
-    return new OTLPTraceExporter({
-      url: opts.endpoint,
-    })
-  }
   if (opts.enableOTLPExporter) {
     return new OTLPTraceExporter()
   }
