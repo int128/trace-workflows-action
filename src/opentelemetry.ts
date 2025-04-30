@@ -2,13 +2,12 @@ import * as core from '@actions/core'
 import { NodeSDK } from '@opentelemetry/sdk-node'
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto'
 import { ConsoleSpanExporter, SpanExporter } from '@opentelemetry/sdk-trace-node'
-import { Context } from './context.js'
 import { resourceFromAttributes } from '@opentelemetry/resources'
 import { ATTR_HOST_NAME, ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions/incubating'
 
 type Options = {
   enableOTLPExporter: boolean
-  context: Context
+  githubServerUrl: string
 }
 
 export const withOpenTelemetry = async <T>(opts: Options, f: () => Promise<T>): Promise<T> => {
@@ -20,7 +19,7 @@ export const withOpenTelemetry = async <T>(opts: Options, f: () => Promise<T>): 
     autoDetectResources: false,
     resource: resourceFromAttributes({
       [ATTR_SERVICE_NAME]: 'github-actions',
-      [ATTR_HOST_NAME]: opts.context.serverHostname,
+      [ATTR_HOST_NAME]: getHostname(opts.githubServerUrl),
     }),
   })
   sdk.start()
@@ -38,4 +37,12 @@ const getTraceExporter = (opts: Options): SpanExporter => {
     return new OTLPTraceExporter()
   }
   return new ConsoleSpanExporter()
+}
+
+const getHostname = (serverUrl: string): string | undefined => {
+  try {
+    return new URL(serverUrl).hostname
+  } catch (e) {
+    core.warning(`Invalid serverUrl: ${serverUrl}: ${String(e)}`)
+  }
 }
