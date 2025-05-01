@@ -76,6 +76,7 @@ describe('summaryListChecksQuery', () => {
     expect(event).toEqual<WorkflowEvent>({
       workflowRuns: [
         {
+          id: 2,
           event: 'push',
           workflowName: 'CI',
           url: 'https://github.com/int128/trace-workflows-action/actions/runs/2',
