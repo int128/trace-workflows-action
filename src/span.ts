@@ -95,6 +95,23 @@ const exportSpans = (event: WorkflowEvent, context: Context) => {
                     },
                     (span) => {
                       try {
+                        tracer.startActiveSpan(
+                          'queued',
+                          {
+                            startTime: job.createdAt,
+                            attributes: {
+                              ...commonAttributes,
+                              'operation.name': 'job.queued',
+                              [ATTR_URL_FULL]: job.url,
+                              'github.workflow.name': workflowRun.workflowName,
+                              'github.job.name': job.name,
+                              'github.job.runner.label': job.runnerLabel,
+                            },
+                          },
+                          (span) => {
+                            span.end(job.startedAt)
+                          },
+                        )
                         for (const step of job.steps) {
                           tracer.startActiveSpan(
                             step.name,
