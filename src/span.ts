@@ -135,6 +135,18 @@ const exportJob = (job: Job, tracer: Tracer, attributes: Attributes) => {
     },
     (span) => {
       try {
+        tracer.startActiveSpan(
+          'job.queued',
+          {
+            startTime: job.createdAt,
+            attributes: {
+              ...jobAttributes,
+              'operation.name': 'job.queued',
+              [ATTR_URL_FULL]: job.url,
+            },
+          },
+          (span) => span.end(job.startedAt),
+        )
         for (const step of job.steps) {
           exportStep(step, tracer, jobAttributes)
         }
