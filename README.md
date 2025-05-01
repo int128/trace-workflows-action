@@ -10,8 +10,8 @@ You need to run this action after all workflows are completed.
 
 ### 1. Create a workflow to wait for all workflows
 
-Create a workflow to wait for all workflows.
-This workflow runs on pull requests and waits for all workflows to be completed.
+This workflow runs on pull requests and waits for all workflows to be completed,
+using [wait-for-workflows-action](https://github.com/int128/wait-for-workflows-action).
 
 ```yaml
 name: wait-for-workflows
@@ -29,7 +29,6 @@ jobs:
 
 ### 2. Create a workflow to export the trace
 
-Create a workflow to export the trace.
 This workflow runs on the completion of the `wait-for-workflows` workflow.
 
 ```yaml
