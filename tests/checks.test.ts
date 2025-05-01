@@ -31,6 +31,7 @@ describe('summaryListChecksQuery', () => {
                   __typename: 'CheckSuite',
                   workflowRun: {
                     __typename: 'WorkflowRun',
+                    databaseId: 2,
                     event: 'push',
                     workflow: {
                       __typename: 'Workflow',
