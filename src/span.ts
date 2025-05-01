@@ -1,12 +1,12 @@
 import * as core from '@actions/core'
-import * as opentelemetry from '@opentelemetry/api'
 import { resourceFromAttributes } from '@opentelemetry/resources'
 import { ConsoleSpanExporter } from '@opentelemetry/sdk-trace-node'
 import { Context } from './github.js'
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto'
 import { NodeSDK } from '@opentelemetry/sdk-node'
-import { Job, WorkflowEvent, WorkflowRun } from './checks.js'
 import { CheckConclusionState } from './generated/graphql-types.js'
+import { Job, WorkflowEvent, WorkflowRun } from './checks.js'
+import { trace, Attributes, Tracer, SpanStatusCode } from '@opentelemetry/api'
 import { ATTR_DEPLOYMENT_ENVIRONMENT_NAME, ATTR_HOST_NAME } from '@opentelemetry/semantic-conventions/incubating'
 import {
   ATTR_ERROR_TYPE,
@@ -32,22 +32,23 @@ export const exportTrace = async (event: WorkflowEvent, context: Context, enable
   })
   sdk.start()
   try {
-    exportEvent(event, context, {
-      'github.repository': `${context.repo.owner}/${context.repo.repo}`,
-      'github.ref': context.target.ref,
-      'github.sha': context.target.sha,
-      'github.actor': context.actor,
-      'github.event.name': context.target.eventName,
-      'github.run_attempt': context.target.runAttempt,
-    })
+    exportEvent(event, context)
   } finally {
     await core.group('Flushing the trace exporter', async () => await traceExporter.forceFlush())
     await core.group('Shutting down OpenTelemetry', async () => await sdk.shutdown())
   }
 }
 
-const exportEvent = (event: WorkflowEvent, context: Context, attributes: opentelemetry.Attributes) => {
-  const tracer = opentelemetry.trace.getTracer('trace-workflows-action')
+const exportEvent = (event: WorkflowEvent, context: Context) => {
+  const tracer = trace.getTracer('trace-workflows-action')
+  const attributes: Attributes = {
+    'github.repository': `${context.repo.owner}/${context.repo.repo}`,
+    'github.ref': context.target.ref,
+    'github.sha': context.target.sha,
+    'github.actor': context.actor,
+    'github.event.name': context.target.eventName,
+    'github.run_attempt': context.target.runAttempt,
+  }
   tracer.startActiveSpan(
     `${context.repo.owner}/${context.repo.repo}:${context.target.eventName}:${context.target.ref}`,
     {
@@ -62,7 +63,7 @@ const exportEvent = (event: WorkflowEvent, context: Context, attributes: opentel
     (span) => {
       try {
         for (const workflowRun of event.workflowRuns) {
-          exportWorkflowRun(workflowRun, attributes)
+          exportWorkflowRun(workflowRun, tracer, attributes)
         }
       } finally {
         span.end(event.completedAt)
@@ -71,8 +72,7 @@ const exportEvent = (event: WorkflowEvent, context: Context, attributes: opentel
   )
 }
 
-const exportWorkflowRun = (workflowRun: WorkflowRun, attributes: opentelemetry.Attributes) => {
-  const tracer = opentelemetry.trace.getTracer('trace-workflows-action')
+const exportWorkflowRun = (workflowRun: WorkflowRun, tracer: Tracer, attributes: Attributes) => {
   tracer.startActiveSpan(
     workflowRun.workflowName,
     {
@@ -88,7 +88,7 @@ const exportWorkflowRun = (workflowRun: WorkflowRun, attributes: opentelemetry.A
     (span) => {
       try {
         for (const job of workflowRun.jobs) {
-          exportJob(job, {
+          exportJob(job, tracer, {
             ...attributes,
             'github.workflow.name': workflowRun.workflowName,
           })
@@ -104,8 +104,7 @@ const exportWorkflowRun = (workflowRun: WorkflowRun, attributes: opentelemetry.A
   )
 }
 
-const exportJob = (job: Job, attributes: opentelemetry.Attributes) => {
-  const tracer = opentelemetry.trace.getTracer('trace-workflows-action')
+const exportJob = (job: Job, tracer: Tracer, attributes: Attributes) => {
   tracer.startActiveSpan(
     job.name,
     {
@@ -159,9 +158,9 @@ const getStatusCode = (conclusion: CheckConclusionState | null | undefined) => {
     case CheckConclusionState.StartupFailure:
     case CheckConclusionState.TimedOut:
     case CheckConclusionState.Cancelled:
-      return opentelemetry.SpanStatusCode.ERROR
+      return SpanStatusCode.ERROR
   }
-  return opentelemetry.SpanStatusCode.OK
+  return SpanStatusCode.OK
 }
 
 const getErrorType = (conclusion: CheckConclusionState | null | undefined) => {
