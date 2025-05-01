@@ -1,19 +1,25 @@
 import * as core from '@actions/core'
-import * as opentelemetry from '@opentelemetry/api'
 import { resourceFromAttributes } from '@opentelemetry/resources'
 import { ConsoleSpanExporter } from '@opentelemetry/sdk-trace-node'
 import { Context } from './github.js'
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto'
 import { NodeSDK } from '@opentelemetry/sdk-node'
-import { WorkflowEvent } from './checks.js'
 import { CheckConclusionState } from './generated/graphql-types.js'
-import { ATTR_DEPLOYMENT_ENVIRONMENT_NAME, ATTR_HOST_NAME } from '@opentelemetry/semantic-conventions/incubating'
+import { Job, Step, WorkflowEvent, WorkflowRun } from './checks.js'
+import { trace, Attributes, Tracer, SpanStatusCode } from '@opentelemetry/api'
+import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION, ATTR_URL_FULL } from '@opentelemetry/semantic-conventions'
 import {
-  ATTR_ERROR_TYPE,
-  ATTR_SERVICE_NAME,
-  ATTR_SERVICE_VERSION,
-  ATTR_URL_FULL,
-} from '@opentelemetry/semantic-conventions'
+  ATTR_CICD_PIPELINE_NAME,
+  ATTR_CICD_PIPELINE_RESULT,
+  ATTR_CICD_PIPELINE_RUN_ID,
+  ATTR_CICD_PIPELINE_RUN_STATE,
+  ATTR_CICD_PIPELINE_RUN_URL_FULL,
+  ATTR_CICD_PIPELINE_TASK_NAME,
+  ATTR_CICD_PIPELINE_TASK_RUN_ID,
+  ATTR_CICD_PIPELINE_TASK_RUN_URL_FULL,
+  ATTR_DEPLOYMENT_ENVIRONMENT_NAME,
+  ATTR_HOST_NAME,
+} from '@opentelemetry/semantic-conventions/incubating'
 
 export const exportTrace = async (event: WorkflowEvent, context: Context, enableOTLPExporter: boolean) => {
   const traceExporter = enableOTLPExporter ? new OTLPTraceExporter() : new ConsoleSpanExporter()
@@ -32,16 +38,16 @@ export const exportTrace = async (event: WorkflowEvent, context: Context, enable
   })
   sdk.start()
   try {
-    exportSpans(event, context)
+    exportEvent(event, context)
   } finally {
     await core.group('Flushing the trace exporter', async () => await traceExporter.forceFlush())
     await core.group('Shutting down OpenTelemetry', async () => await sdk.shutdown())
   }
 }
 
-const exportSpans = (event: WorkflowEvent, context: Context) => {
-  const tracer = opentelemetry.trace.getTracer('trace-workflows-action')
-  const commonAttributes = {
+const exportEvent = (event: WorkflowEvent, context: Context) => {
+  const tracer = trace.getTracer('trace-workflows-action')
+  const eventAttributes: Attributes = {
     'github.repository': `${context.repo.owner}/${context.repo.repo}`,
     'github.ref': context.target.ref,
     'github.sha': context.target.sha,
@@ -49,14 +55,13 @@ const exportSpans = (event: WorkflowEvent, context: Context) => {
     'github.event.name': context.target.eventName,
     'github.run_attempt': context.target.runAttempt,
   }
-
   tracer.startActiveSpan(
     `${context.repo.owner}/${context.repo.repo}:${context.target.eventName}:${context.target.ref}`,
     {
       root: true,
       startTime: event.startedAt,
       attributes: {
-        ...commonAttributes,
+        ...eventAttributes,
         'operation.name': 'event',
         [ATTR_URL_FULL]: getEventURL(context),
       },
@@ -64,104 +69,99 @@ const exportSpans = (event: WorkflowEvent, context: Context) => {
     (span) => {
       try {
         for (const workflowRun of event.workflowRuns) {
-          tracer.startActiveSpan(
-            workflowRun.workflowName,
-            {
-              startTime: workflowRun.createdAt,
-              attributes: {
-                ...commonAttributes,
-                'operation.name': 'workflow',
-                [ATTR_ERROR_TYPE]: getErrorType(workflowRun.conclusion),
-                [ATTR_URL_FULL]: workflowRun.url,
-                'github.workflow.name': workflowRun.workflowName,
-              },
-            },
-            (span) => {
-              try {
-                for (const job of workflowRun.jobs) {
-                  tracer.startActiveSpan(
-                    job.name,
-                    {
-                      startTime: job.startedAt,
-                      attributes: {
-                        ...commonAttributes,
-                        'operation.name': 'job',
-                        [ATTR_ERROR_TYPE]: getErrorType(job.conclusion),
-                        [ATTR_URL_FULL]: job.url,
-                        'github.workflow.name': workflowRun.workflowName,
-                        'github.job.name': job.name,
-                        'github.job.runner.label': job.runnerLabel,
-                      },
-                    },
-                    (span) => {
-                      try {
-                        tracer.startActiveSpan(
-                          'queued',
-                          {
-                            startTime: job.createdAt,
-                            attributes: {
-                              ...commonAttributes,
-                              'operation.name': 'job.queued',
-                              [ATTR_URL_FULL]: job.url,
-                              'github.workflow.name': workflowRun.workflowName,
-                              'github.job.name': job.name,
-                              'github.job.runner.label': job.runnerLabel,
-                            },
-                          },
-                          (span) => {
-                            span.end(job.startedAt)
-                          },
-                        )
-                        for (const step of job.steps) {
-                          tracer.startActiveSpan(
-                            step.name,
-                            {
-                              startTime: step.startedAt,
-                              attributes: {
-                                ...commonAttributes,
-                                'operation.name': 'step',
-                                [ATTR_ERROR_TYPE]: getErrorType(step.conclusion),
-                                'github.workflow.name': workflowRun.workflowName,
-                                'github.job.name': job.name,
-                                'github.job.runner.label': job.runnerLabel,
-                                'github.step.name': step.name,
-                              },
-                            },
-                            (span) => {
-                              try {
-                                span.setStatus({
-                                  code: getStatusCode(step.conclusion),
-                                  message: step.conclusion,
-                                })
-                              } finally {
-                                span.end(step.completedAt)
-                              }
-                            },
-                          )
-                        }
-                        span.setStatus({
-                          code: getStatusCode(job.conclusion),
-                          message: job.conclusion || undefined,
-                        })
-                      } finally {
-                        span.end(job.completedAt)
-                      }
-                    },
-                  )
-                }
-                span.setStatus({
-                  code: getStatusCode(workflowRun.conclusion),
-                  message: workflowRun.conclusion || undefined,
-                })
-              } finally {
-                span.end(workflowRun.completedAt)
-              }
-            },
-          )
+          exportWorkflowRun(workflowRun, tracer, eventAttributes)
         }
       } finally {
         span.end(event.completedAt)
       }
+    },
+  )
+}
+
+const exportWorkflowRun = (workflowRun: WorkflowRun, tracer: Tracer, attributes: Attributes) => {
+  const workflowRunAttributes: Attributes = {
+    ...attributes,
+    [ATTR_CICD_PIPELINE_NAME]: workflowRun.workflowName,
+    [ATTR_CICD_PIPELINE_RESULT]: workflowRun.conclusion,
+    [ATTR_CICD_PIPELINE_RUN_STATE]: workflowRun.status,
+    [ATTR_CICD_PIPELINE_RUN_ID]: workflowRun.id,
+    [ATTR_CICD_PIPELINE_RUN_URL_FULL]: workflowRun.url,
+    'github.workflow.name': workflowRun.workflowName,
+    'github.workflow.conclusion': workflowRun.conclusion,
+    'github.workflow.status': workflowRun.status,
+  }
+  tracer.startActiveSpan(
+    workflowRun.workflowName,
+    {
+      startTime: workflowRun.createdAt,
+      attributes: {
+        ...workflowRunAttributes,
+        'operation.name': 'workflow',
+        [ATTR_URL_FULL]: workflowRun.url,
+      },
+    },
+    (span) => {
+      try {
+        for (const job of workflowRun.jobs) {
+          exportJob(job, tracer, workflowRunAttributes)
+        }
+        span.setStatus({ code: getStatusCode(workflowRun.conclusion) })
+      } finally {
+        span.end(workflowRun.completedAt)
+      }
+    },
+  )
+}
+
+const exportJob = (job: Job, tracer: Tracer, attributes: Attributes) => {
+  const jobAttributes: Attributes = {
+    ...attributes,
+    [ATTR_CICD_PIPELINE_TASK_NAME]: job.name,
+    [ATTR_CICD_PIPELINE_TASK_RUN_ID]: job.id,
+    [ATTR_CICD_PIPELINE_TASK_RUN_URL_FULL]: job.url,
+    'github.job.name': job.name,
+    'github.job.conclusion': job.conclusion ?? undefined,
+    'github.job.status': job.status,
+  }
+  tracer.startActiveSpan(
+    job.name,
+    {
+      startTime: job.startedAt,
+      attributes: {
+        ...jobAttributes,
+        'operation.name': 'job',
+        [ATTR_URL_FULL]: job.url,
+      },
+    },
+    (span) => {
+      try {
+        for (const step of job.steps) {
+          exportStep(step, tracer, jobAttributes)
+        }
+        span.setStatus({ code: getStatusCode(job.conclusion) })
+      } finally {
+        span.end(job.completedAt)
+      }
+    },
+  )
+}
+
+const exportStep = (step: Step, tracer: Tracer, attributes: Attributes) => {
+  tracer.startActiveSpan(
+    step.name,
+    {
+      startTime: step.startedAt,
+      attributes: {
+        ...attributes,
+        'operation.name': 'step',
+        'github.step.name': step.name,
+        'github.step.conclusion': step.conclusion,
+        'github.step.status': step.status,
+      },
+    },
+    (span) => {
+      span.setStatus({ code: getStatusCode(step.conclusion) })
+      span.end(step.completedAt)
     },
   )
 }
@@ -188,24 +188,19 @@ const getEventURL = (context: Context): string => {
   return `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/tree/${context.target.ref}`
 }
 
-const getStatusCode = (conclusion: string | null | undefined) => {
-  if (isErrorConclusion(conclusion)) {
-    return opentelemetry.SpanStatusCode.ERROR
+const getStatusCode = (conclusion: string | null | undefined): SpanStatusCode => {
+  switch (conclusion) {
+    case CheckConclusionState.Success:
+      return SpanStatusCode.OK
+    case CheckConclusionState.Failure:
+    case CheckConclusionState.StartupFailure:
+    case CheckConclusionState.TimedOut:
+    case CheckConclusionState.Cancelled:
+    case 'failure':
+    case 'timed_out':
+    case 'cancelled':
+      return SpanStatusCode.ERROR
+    default:
+      return SpanStatusCode.UNSET
   }
-  return opentelemetry.SpanStatusCode.OK
 }
-
-const getErrorType = (conclusion: string | null | undefined) => {
-  if (isErrorConclusion(conclusion)) {
-    return conclusion
-  }
-}
-
-const isErrorConclusion = (conclusion: string | null | undefined) =>
-  conclusion === CheckConclusionState.Failure ||
-  conclusion === CheckConclusionState.StartupFailure ||
-  conclusion === CheckConclusionState.TimedOut ||
-  conclusion === CheckConclusionState.Cancelled ||
-  conclusion === 'failure' ||
-  conclusion === 'timed_out' ||
-  conclusion === 'cancelled'

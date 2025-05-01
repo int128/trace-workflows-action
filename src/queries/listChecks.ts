@@ -30,6 +30,7 @@ const query = /* GraphQL */ `
               cursor
               node {
                 workflowRun {
+                  databaseId
                   event
                   workflow {
                     name

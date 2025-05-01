@@ -31,13 +31,13 @@ describe('summaryListChecksQuery', () => {
                   __typename: 'CheckSuite',
                   workflowRun: {
                     __typename: 'WorkflowRun',
+                    databaseId: 2,
                     event: 'push',
                     workflow: {
                       __typename: 'Workflow',
                       name: 'CI',
                     },
                     url: 'https://github.com/int128/trace-workflows-action/actions/runs/2',
-                    databaseId: 2,
                   },
                   createdAt: '2021-08-04T00:00:00Z',
                   status: CheckStatusState.Completed,
@@ -52,6 +52,7 @@ describe('summaryListChecksQuery', () => {
     const workflowJobsProvider: WorkflowJobsProvider = () =>
       Promise.resolve([
         {
+          id: 3,
           name: 'build',
           status: 'completed',
           conclusion: 'success',
@@ -77,6 +78,7 @@ describe('summaryListChecksQuery', () => {
     expect(event).toEqual<WorkflowEvent>({
       workflowRuns: [
         {
+          id: 2,
           event: 'push',
           workflowName: 'CI',
           url: 'https://github.com/int128/trace-workflows-action/actions/runs/2',
@@ -86,6 +88,7 @@ describe('summaryListChecksQuery', () => {
           completedAt: new Date('2021-08-04T00:02:00Z'),
           jobs: [
             {
+              id: 3,
               name: 'build',
               url: 'https://github.com/int128/trace-workflows-action/actions/runs/2/job/3',
               status: 'completed',

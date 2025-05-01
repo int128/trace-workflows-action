@@ -14,17 +14,19 @@ export type WorkflowEvent = {
 }
 
 export type WorkflowRun = {
+  id: number
   event: string
   workflowName: string
   url: string
   status: CheckStatusState
-  conclusion: CheckConclusionState | null | undefined
+  conclusion: CheckConclusionState | undefined
   createdAt: Date
   completedAt: Date
   jobs: Job[]
 }
 
 export type Job = {
+  id: number
   name: string
   url: string
   status: ListJobsForWorkflowRunResult['status']
@@ -46,7 +48,16 @@ export type Step = {
 
 type ListJobsForWorkflowRunResult = Pick<
   Awaited<ReturnType<Octokit['rest']['actions']['listJobsForWorkflowRun']>>['data']['jobs'][number],
-  'name' | 'status' | 'conclusion' | 'html_url' | 'labels' | 'created_at' | 'started_at' | 'completed_at' | 'steps'
+  | 'id'
+  | 'name'
+  | 'status'
+  | 'conclusion'
+  | 'html_url'
+  | 'labels'
+  | 'created_at'
+  | 'started_at'
+  | 'completed_at'
+  | 'steps'
 >
 
 export type WorkflowJobsProvider = (workflowRunId: number) => Promise<ListJobsForWorkflowRunResult[]>
@@ -69,10 +80,8 @@ export const summaryListChecksQuery = async (
     const checkSuite = checkSuiteEdge.node
     assert(checkSuite != null)
     assert(checkSuite.workflowRun != null)
+    assert(checkSuite.workflowRun.databaseId != null)
     if (checkSuite.workflowRun.event !== filter.event) {
-      continue
-    }
-    if (checkSuite.workflowRun.databaseId == null) {
       continue
     }
 
@@ -110,6 +119,7 @@ export const summaryListChecksQuery = async (
       }
 
       jobs.push({
+        id: workflowJob.id,
         name: workflowJob.name,
         url: workflowJob.html_url,
         status: workflowJob.status,
@@ -127,11 +137,12 @@ export const summaryListChecksQuery = async (
       continue
     }
     workflowRuns.push({
+      id: checkSuite.workflowRun.databaseId,
       event: checkSuite.workflowRun.event,
       workflowName: checkSuite.workflowRun.workflow.name,
       url: checkSuite.workflowRun.url,
       status: checkSuite.status,
-      conclusion: checkSuite.conclusion,
+      conclusion: checkSuite.conclusion ?? undefined,
       createdAt: new Date(checkSuite.createdAt),
       completedAt,
       jobs,
