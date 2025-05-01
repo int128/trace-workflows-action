@@ -1,21 +1,47 @@
+import * as core from '@actions/core'
 import * as opentelemetry from '@opentelemetry/api'
+import { resourceFromAttributes } from '@opentelemetry/resources'
+import { ConsoleSpanExporter } from '@opentelemetry/sdk-trace-node'
+import { Context } from './github.js'
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto'
+import { NodeSDK } from '@opentelemetry/sdk-node'
+import { WorkflowEvent } from './checks.js'
+import { CheckConclusionState } from './generated/graphql-types.js'
+import { ATTR_DEPLOYMENT_ENVIRONMENT_NAME, ATTR_HOST_NAME } from '@opentelemetry/semantic-conventions/incubating'
 import {
   ATTR_ERROR_TYPE,
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,
   ATTR_URL_FULL,
 } from '@opentelemetry/semantic-conventions'
-import { ATTR_DEPLOYMENT_ENVIRONMENT_NAME } from '@opentelemetry/semantic-conventions/incubating'
-import { Context } from './github.js'
-import { WorkflowEvent } from './checks.js'
-import { CheckConclusionState } from './generated/graphql-types.js'
 
-export const exportSpans = (event: WorkflowEvent, context: Context) => {
+export const exportTrace = async (event: WorkflowEvent, context: Context, enableOTLPExporter: boolean) => {
+  const traceExporter = enableOTLPExporter ? new OTLPTraceExporter() : new ConsoleSpanExporter()
+  const sdk = new NodeSDK({
+    traceExporter,
+    // Exclude the current environment attributes.
+    // This action should be run on workflow_run event,
+    // the current environment does not reflect the target workflows.
+    autoDetectResources: false,
+    resource: resourceFromAttributes({
+      [ATTR_HOST_NAME]: getHostname(context),
+      [ATTR_SERVICE_NAME]: 'github-actions',
+      [ATTR_SERVICE_VERSION]: context.target.sha,
+      [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]: getEnvironmentName(context),
+    }),
+  })
+  sdk.start()
+  try {
+    exportSpans(event, context)
+  } finally {
+    await core.group('Flushing the trace exporter', async () => await traceExporter.forceFlush())
+    await core.group('Shutting down OpenTelemetry', async () => await sdk.shutdown())
+  }
+}
+
+const exportSpans = (event: WorkflowEvent, context: Context) => {
   const tracer = opentelemetry.trace.getTracer('trace-workflows-action')
-  const environmentName = getEnvironmentName(context)
   const commonAttributes = {
-    [ATTR_SERVICE_VERSION]: context.target.sha,
-    [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]: environmentName,
     'github.repository': `${context.repo.owner}/${context.repo.repo}`,
     'github.ref': context.target.ref,
     'github.sha': context.target.sha,
@@ -31,7 +57,7 @@ export const exportSpans = (event: WorkflowEvent, context: Context) => {
       startTime: event.startedAt,
       attributes: {
         ...commonAttributes,
-        [ATTR_SERVICE_NAME]: 'github-actions-event',
+        'operation.name': 'event',
         [ATTR_URL_FULL]: getEventURL(context),
       },
     },
@@ -44,7 +70,7 @@ export const exportSpans = (event: WorkflowEvent, context: Context) => {
               startTime: workflowRun.createdAt,
               attributes: {
                 ...commonAttributes,
-                [ATTR_SERVICE_NAME]: 'github-actions-workflow',
+                'operation.name': 'workflow',
                 [ATTR_ERROR_TYPE]: getErrorType(workflowRun.conclusion),
                 [ATTR_URL_FULL]: workflowRun.url,
                 'github.workflow.name': workflowRun.workflowName,
@@ -59,7 +85,7 @@ export const exportSpans = (event: WorkflowEvent, context: Context) => {
                       startTime: job.startedAt,
                       attributes: {
                         ...commonAttributes,
-                        [ATTR_SERVICE_NAME]: 'github-actions-job',
+                        'operation.name': 'job',
                         [ATTR_ERROR_TYPE]: getErrorType(job.conclusion),
                         [ATTR_URL_FULL]: job.url,
                         'github.workflow.name': workflowRun.workflowName,
@@ -93,6 +119,14 @@ export const exportSpans = (event: WorkflowEvent, context: Context) => {
       }
     },
   )
+}
+
+const getHostname = (context: Context): string | undefined => {
+  try {
+    return new URL(context.serverUrl).hostname
+  } catch (e) {
+    core.warning(`Invalid GITHUB_SERVER_URL: ${context.serverUrl}: ${String(e)}`)
+  }
 }
 
 const getEnvironmentName = (context: Context): string => {
