@@ -47,8 +47,6 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: int128/trace-workflows-action@v0
-        with:
-          enable-otlp-exporter: true
         env:
           OTEL_EXPORTER_OTLP_ENDPOINT: http://opentelemetry-collector:4318
 ```
@@ -125,10 +123,9 @@ See [the GraphQL query](src/queries/listChecks.ts) for details.
 
 ### Inputs
 
-| Name                   | Default value  | Description                      |
-| ---------------------- | -------------- | -------------------------------- |
-| `token`                | `github.token` | GitHub token                     |
-| `enable-otlp-exporter` | false          | If true, export a trace via OTLP |
+| Name    | Default value  | Description  |
+| ------- | -------------- | ------------ |
+| `token` | `github.token` | GitHub token |
 
 ### Environment variables
 
