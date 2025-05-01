@@ -90,7 +90,6 @@ describe('summaryListChecksQuery', () => {
               url: 'https://github.com/int128/trace-workflows-action/actions/runs/2/job/3',
               status: 'completed',
               conclusion: 'success',
-              runAttempt: 1,
               runnerLabel: 'ubuntu-latest',
               createdAt: new Date('2021-08-04T00:00:00Z'),
               startedAt: new Date('2021-08-04T00:01:00Z'),
