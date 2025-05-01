@@ -29,7 +29,6 @@ export type Job = {
   url: string
   status: ListJobsForWorkflowRunResult['status']
   conclusion: ListJobsForWorkflowRunResult['conclusion']
-  runAttempt: number | undefined
   runnerLabel: string | undefined
   createdAt: Date
   startedAt: Date
@@ -47,16 +46,7 @@ export type Step = {
 
 type ListJobsForWorkflowRunResult = Pick<
   Awaited<ReturnType<Octokit['rest']['actions']['listJobsForWorkflowRun']>>['data']['jobs'][number],
-  | 'name'
-  | 'status'
-  | 'conclusion'
-  | 'html_url'
-  | 'run_attempt'
-  | 'labels'
-  | 'created_at'
-  | 'started_at'
-  | 'completed_at'
-  | 'steps'
+  'name' | 'status' | 'conclusion' | 'html_url' | 'labels' | 'created_at' | 'started_at' | 'completed_at' | 'steps'
 >
 
 export type WorkflowJobsProvider = (workflowRunId: number) => Promise<ListJobsForWorkflowRunResult[]>
@@ -124,7 +114,6 @@ export const summaryListChecksQuery = async (
         url: workflowJob.html_url,
         status: workflowJob.status,
         conclusion: workflowJob.conclusion,
-        runAttempt: workflowJob.run_attempt,
         runnerLabel: workflowJob.labels.at(0),
         createdAt: new Date(workflowJob.created_at),
         startedAt: new Date(workflowJob.started_at),
