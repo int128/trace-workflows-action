@@ -38,9 +38,8 @@ export const exportTrace = async (event: WorkflowEvent, context: Context) => {
     exportEvent(event, context)
     core.endGroup()
   } finally {
-    core.startGroup('Shutting down OpenTelemetry')
+    core.info('Shutting down OpenTelemetry')
     await sdk.shutdown()
-    core.endGroup()
   }
 }
 
