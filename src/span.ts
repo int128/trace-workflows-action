@@ -136,7 +136,7 @@ const exportJob = (job: Job, tracer: Tracer, attributes: Attributes) => {
     (span) => {
       try {
         tracer.startActiveSpan(
-          'job.queued',
+          'Queued',
           {
             startTime: job.createdAt,
             attributes: {
