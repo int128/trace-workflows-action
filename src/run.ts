@@ -9,7 +9,6 @@ import { Context } from './github.js'
 const GITHUB_ACTIONS_APP_ID = 15368
 
 export type Inputs = {
-  enableOTLPExporter: boolean
   pageSizeOfCheckSuites: number
   pageSizeOfCheckRuns: number
 }
@@ -30,5 +29,5 @@ export const run = async (inputs: Inputs, octokit: Octokit, context: Context): P
   core.startGroup('Event')
   core.info(JSON.stringify(event, undefined, 2))
   core.endGroup()
-  await exportTrace(event, context, inputs.enableOTLPExporter)
+  await exportTrace(event, context)
 }
