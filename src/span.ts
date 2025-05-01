@@ -91,7 +91,7 @@ const exportSpans = (event: WorkflowEvent, context: Context) => {
                         'github.workflow.name': workflowRun.workflowName,
                         'github.job.name': job.name,
                         'github.job.run_attempt': job.runAttempt,
-                        'github.job.runner_label': job.runnerLabel,
+                        'github.job.runner.label': job.runnerLabel,
                       },
                     },
                     (span) => {
@@ -103,10 +103,12 @@ const exportSpans = (event: WorkflowEvent, context: Context) => {
                               startTime: step.startedAt,
                               attributes: {
                                 ...commonAttributes,
-                                [ATTR_SERVICE_NAME]: 'github-actions-step',
+                                'operation.name': 'step',
                                 [ATTR_ERROR_TYPE]: getErrorType(step.conclusion),
                                 'github.workflow.name': workflowRun.workflowName,
                                 'github.job.name': job.name,
+                                'github.job.run_attempt': job.runAttempt,
+                                'github.job.runner.label': job.runnerLabel,
                                 'github.step.name': step.name,
                               },
                             },
