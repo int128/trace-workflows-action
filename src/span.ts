@@ -34,9 +34,13 @@ export const exportTrace = async (event: WorkflowEvent, context: Context) => {
   })
   sdk.start()
   try {
+    core.startGroup('Exporting the trace')
     exportEvent(event, context)
+    core.endGroup()
   } finally {
-    await core.group('Shutting down OpenTelemetry', async () => await sdk.shutdown())
+    core.startGroup('Shutting down OpenTelemetry')
+    await sdk.shutdown()
+    core.endGroup()
   }
 }
 
