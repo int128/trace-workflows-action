@@ -1,7 +1,7 @@
 import * as core from '@actions/core'
 import * as github from './github.js'
 import { summaryListChecksQuery } from './checks.js'
-import { exportSpans } from './span.js'
+import { exportTrace } from './span.js'
 import { getListChecksQuery } from './queries/listChecks.js'
 import { Octokit } from '@octokit/action'
 
@@ -9,6 +9,7 @@ import { Octokit } from '@octokit/action'
 const GITHUB_ACTIONS_APP_ID = 15368
 
 export type Inputs = {
+  enableOTLPExporter: boolean
   pageSizeOfCheckSuites: number
   pageSizeOfCheckRuns: number
 }
@@ -41,5 +42,5 @@ export const run = async (inputs: Inputs, octokit: Octokit, context: github.Cont
   core.startGroup('Event')
   core.info(JSON.stringify(event, undefined, 2))
   core.endGroup()
-  exportSpans(event, context)
+  await exportTrace(event, context, inputs.enableOTLPExporter)
 }
