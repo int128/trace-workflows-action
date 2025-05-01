@@ -3,7 +3,7 @@ import { NodeSDK } from '@opentelemetry/sdk-node'
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto'
 import { ConsoleSpanExporter } from '@opentelemetry/sdk-trace-node'
 import { resourceFromAttributes } from '@opentelemetry/resources'
-import { ATTR_HOST_NAME, ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions/incubating'
+import { ATTR_HOST_NAME } from '@opentelemetry/semantic-conventions/incubating'
 
 type Options = {
   enableOTLPExporter: boolean
@@ -19,7 +19,6 @@ export const withOpenTelemetry = async <T>(opts: Options, f: () => Promise<T>): 
     // the current environment does not reflect the target workflows.
     autoDetectResources: false,
     resource: resourceFromAttributes({
-      [ATTR_SERVICE_NAME]: 'github-actions',
       [ATTR_HOST_NAME]: getHostname(opts.githubServerUrl),
     }),
   })
