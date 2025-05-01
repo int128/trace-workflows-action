@@ -82,7 +82,7 @@ const exportSpans = (event: WorkflowEvent, context: Context) => {
                   tracer.startActiveSpan(
                     job.name,
                     {
-                      startTime: job.createdAt,
+                      startTime: job.startedAt,
                       attributes: {
                         ...commonAttributes,
                         'operation.name': 'job',
