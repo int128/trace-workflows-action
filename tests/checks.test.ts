@@ -31,6 +31,7 @@ describe('summaryListChecksQuery', () => {
                   __typename: 'CheckSuite',
                   workflowRun: {
                     __typename: 'WorkflowRun',
+                    databaseId: 2,
                     event: 'push',
                     workflow: {
                       __typename: 'Workflow',
@@ -76,6 +77,7 @@ describe('summaryListChecksQuery', () => {
     expect(event).toEqual<WorkflowEvent>({
       workflowRuns: [
         {
+          id: 2,
           event: 'push',
           workflowName: 'CI',
           url: 'https://github.com/int128/trace-workflows-action/actions/runs/2',
@@ -85,6 +87,7 @@ describe('summaryListChecksQuery', () => {
           completedAt: new Date('2021-08-04T00:01:00Z'),
           jobs: [
             {
+              id: 3,
               name: 'build',
               url: 'https://github.com/int128/trace-workflows-action/actions/runs/2/job/3',
               status: CheckStatusState.Completed,

@@ -7,13 +7,19 @@ import { NodeSDK } from '@opentelemetry/sdk-node'
 import { CheckConclusionState } from './generated/graphql-types.js'
 import { Job, WorkflowEvent, WorkflowRun } from './checks.js'
 import { trace, Attributes, Tracer, SpanStatusCode } from '@opentelemetry/api'
-import { ATTR_DEPLOYMENT_ENVIRONMENT_NAME, ATTR_HOST_NAME } from '@opentelemetry/semantic-conventions/incubating'
+import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION, ATTR_URL_FULL } from '@opentelemetry/semantic-conventions'
 import {
-  ATTR_ERROR_TYPE,
-  ATTR_SERVICE_NAME,
-  ATTR_SERVICE_VERSION,
-  ATTR_URL_FULL,
-} from '@opentelemetry/semantic-conventions'
+  ATTR_CICD_PIPELINE_NAME,
+  ATTR_CICD_PIPELINE_RESULT,
+  ATTR_CICD_PIPELINE_RUN_ID,
+  ATTR_CICD_PIPELINE_RUN_STATE,
+  ATTR_CICD_PIPELINE_RUN_URL_FULL,
+  ATTR_CICD_PIPELINE_TASK_NAME,
+  ATTR_CICD_PIPELINE_TASK_RUN_ID,
+  ATTR_CICD_PIPELINE_TASK_RUN_URL_FULL,
+  ATTR_DEPLOYMENT_ENVIRONMENT_NAME,
+  ATTR_HOST_NAME,
+} from '@opentelemetry/semantic-conventions/incubating'
 
 export const exportTrace = async (event: WorkflowEvent, context: Context, enableOTLPExporter: boolean) => {
   const traceExporter = enableOTLPExporter ? new OTLPTraceExporter() : new ConsoleSpanExporter()
@@ -41,7 +47,7 @@ export const exportTrace = async (event: WorkflowEvent, context: Context, enable
 
 const exportEvent = (event: WorkflowEvent, context: Context) => {
   const tracer = trace.getTracer('trace-workflows-action')
-  const attributes: Attributes = {
+  const eventAttributes: Attributes = {
     'github.repository': `${context.repo.owner}/${context.repo.repo}`,
     'github.ref': context.target.ref,
     'github.sha': context.target.sha,
@@ -55,7 +61,7 @@ const exportEvent = (event: WorkflowEvent, context: Context) => {
       root: true,
       startTime: event.startedAt,
       attributes: {
-        ...attributes,
+        ...eventAttributes,
         'operation.name': 'event',
         [ATTR_URL_FULL]: getEventURL(context),
       },
@@ -63,7 +69,7 @@ const exportEvent = (event: WorkflowEvent, context: Context) => {
     (span) => {
       try {
         for (const workflowRun of event.workflowRuns) {
-          exportWorkflowRun(workflowRun, tracer, attributes)
+          exportWorkflowRun(workflowRun, tracer, eventAttributes)
         }
       } finally {
         span.end(event.completedAt)
@@ -73,30 +79,33 @@ const exportEvent = (event: WorkflowEvent, context: Context) => {
 }
 
 const exportWorkflowRun = (workflowRun: WorkflowRun, tracer: Tracer, attributes: Attributes) => {
+  const workflowRunAttributes: Attributes = {
+    ...attributes,
+    [ATTR_CICD_PIPELINE_NAME]: workflowRun.workflowName,
+    [ATTR_CICD_PIPELINE_RESULT]: workflowRun.conclusion,
+    [ATTR_CICD_PIPELINE_RUN_STATE]: workflowRun.status,
+    [ATTR_CICD_PIPELINE_RUN_ID]: workflowRun.id,
+    [ATTR_CICD_PIPELINE_RUN_URL_FULL]: workflowRun.url,
+    'github.workflow.name': workflowRun.workflowName,
+    'github.workflow.conclusion': workflowRun.conclusion,
+    'github.workflow.status': workflowRun.status,
+  }
   tracer.startActiveSpan(
     workflowRun.workflowName,
     {
       startTime: workflowRun.createdAt,
       attributes: {
-        ...attributes,
+        ...workflowRunAttributes,
         'operation.name': 'workflow',
-        [ATTR_ERROR_TYPE]: getErrorType(workflowRun.conclusion),
         [ATTR_URL_FULL]: workflowRun.url,
-        'github.workflow.name': workflowRun.workflowName,
       },
     },
     (span) => {
       try {
         for (const job of workflowRun.jobs) {
-          exportJob(job, tracer, {
-            ...attributes,
-            'github.workflow.name': workflowRun.workflowName,
-          })
+          exportJob(job, tracer, workflowRunAttributes)
         }
-        span.setStatus({
-          code: getStatusCode(workflowRun.conclusion),
-          message: workflowRun.conclusion || undefined,
-        })
+        span.setStatus({ code: getStatusCode(workflowRun.conclusion) })
       } finally {
         span.end(workflowRun.completedAt)
       }
@@ -105,24 +114,28 @@ const exportWorkflowRun = (workflowRun: WorkflowRun, tracer: Tracer, attributes:
 }
 
 const exportJob = (job: Job, tracer: Tracer, attributes: Attributes) => {
+  const jobAttributes: Attributes = {
+    ...attributes,
+    [ATTR_CICD_PIPELINE_TASK_NAME]: job.name,
+    [ATTR_CICD_PIPELINE_TASK_RUN_ID]: job.id,
+    [ATTR_CICD_PIPELINE_TASK_RUN_URL_FULL]: job.url,
+    'github.job.name': job.name,
+    'github.job.conclusion': job.conclusion,
+    'github.job.status': job.status,
+  }
   tracer.startActiveSpan(
     job.name,
     {
       startTime: job.startedAt,
       attributes: {
-        ...attributes,
+        ...jobAttributes,
         'operation.name': 'job',
-        [ATTR_ERROR_TYPE]: getErrorType(job.conclusion),
         [ATTR_URL_FULL]: job.url,
-        'github.job.name': job.name,
       },
     },
     (span) => {
       try {
-        span.setStatus({
-          code: getStatusCode(job.conclusion),
-          message: job.conclusion || undefined,
-        })
+        span.setStatus({ code: getStatusCode(job.conclusion) })
       } finally {
         span.end(job.completedAt)
       }
@@ -152,23 +165,16 @@ const getEventURL = (context: Context): string => {
   return `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/tree/${context.target.ref}`
 }
 
-const getStatusCode = (conclusion: CheckConclusionState | null | undefined) => {
+const getStatusCode = (conclusion: CheckConclusionState | undefined): SpanStatusCode => {
   switch (conclusion) {
+    case CheckConclusionState.Success:
+      return SpanStatusCode.OK
     case CheckConclusionState.Failure:
     case CheckConclusionState.StartupFailure:
     case CheckConclusionState.TimedOut:
     case CheckConclusionState.Cancelled:
       return SpanStatusCode.ERROR
-  }
-  return SpanStatusCode.OK
-}
-
-const getErrorType = (conclusion: CheckConclusionState | null | undefined) => {
-  switch (conclusion) {
-    case CheckConclusionState.Failure:
-    case CheckConclusionState.StartupFailure:
-    case CheckConclusionState.TimedOut:
-    case CheckConclusionState.Cancelled:
-      return conclusion
+    default:
+      return SpanStatusCode.UNSET
   }
 }

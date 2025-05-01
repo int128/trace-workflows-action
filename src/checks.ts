@@ -13,21 +13,23 @@ export type WorkflowEvent = {
 }
 
 export type WorkflowRun = {
+  id: number
   event: string
   workflowName: string
   url: string
   status: CheckStatusState
-  conclusion: CheckConclusionState | null | undefined
+  conclusion: CheckConclusionState | undefined
   createdAt: Date
   completedAt: Date
   jobs: Job[]
 }
 
 export type Job = {
+  id: number
   name: string
   url: string
   status: CheckStatusState
-  conclusion: CheckConclusionState | null | undefined
+  conclusion: CheckConclusionState | undefined
   startedAt: Date
   completedAt: Date
 }
@@ -48,6 +50,7 @@ export const summaryListChecksQuery = (q: ListChecksQuery, filter: Filter): Work
     assert(checkSuite.workflowRun != null)
     assert(checkSuite.checkRuns != null)
     assert(checkSuite.checkRuns.edges != null)
+    assert(checkSuite.workflowRun.databaseId != null)
     if (checkSuite.workflowRun.event !== filter.event) {
       continue
     }
@@ -57,6 +60,7 @@ export const summaryListChecksQuery = (q: ListChecksQuery, filter: Filter): Work
       assert(checkRunEdge != null)
       const checkRun = checkRunEdge.node
       assert(checkRun != null)
+      assert(checkRun.databaseId != null)
       if (checkRun.startedAt == null || checkRun.completedAt == null) {
         continue
       }
@@ -64,10 +68,11 @@ export const summaryListChecksQuery = (q: ListChecksQuery, filter: Filter): Work
         continue
       }
       jobs.push({
+        id: checkRun.databaseId,
         name: checkRun.name,
         url: `${checkSuite.workflowRun.url}/job/${checkRun.databaseId}`,
         status: checkRun.status,
-        conclusion: checkRun.conclusion,
+        conclusion: checkRun.conclusion ?? undefined,
         startedAt: new Date(checkRun.startedAt),
         completedAt: new Date(checkRun.completedAt),
       })
@@ -78,11 +83,12 @@ export const summaryListChecksQuery = (q: ListChecksQuery, filter: Filter): Work
       continue
     }
     workflowRuns.push({
+      id: checkSuite.workflowRun.databaseId,
       event: checkSuite.workflowRun.event,
       workflowName: checkSuite.workflowRun.workflow.name,
       url: checkSuite.workflowRun.url,
       status: checkSuite.status,
-      conclusion: checkSuite.conclusion,
+      conclusion: checkSuite.conclusion ?? undefined,
       createdAt: new Date(checkSuite.createdAt),
       completedAt,
       jobs,
