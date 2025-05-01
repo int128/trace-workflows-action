@@ -5,10 +5,7 @@ import {
   ATTR_SERVICE_VERSION,
   ATTR_URL_FULL,
 } from '@opentelemetry/semantic-conventions'
-import {
-  ATTR_DEPLOYMENT_ENVIRONMENT,
-  ATTR_DEPLOYMENT_ENVIRONMENT_NAME,
-} from '@opentelemetry/semantic-conventions/incubating'
+import { ATTR_DEPLOYMENT_ENVIRONMENT_NAME } from '@opentelemetry/semantic-conventions/incubating'
 import { Context } from './github.js'
 import { WorkflowEvent } from './checks.js'
 import { CheckConclusionState } from './generated/graphql-types.js'
@@ -19,7 +16,6 @@ export const exportSpans = (event: WorkflowEvent, context: Context) => {
   const commonAttributes = {
     [ATTR_SERVICE_VERSION]: context.target.sha,
     [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]: environmentName,
-    [ATTR_DEPLOYMENT_ENVIRONMENT]: environmentName,
     'github.repository': `${context.repo.owner}/${context.repo.repo}`,
     'github.ref': context.target.ref,
     'github.sha': context.target.sha,
