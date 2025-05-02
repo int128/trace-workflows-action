@@ -9,7 +9,7 @@ This is useful for a mono-repository (monorepo) with many workflows.
 
 Here is an example of the trace exported to Datadog APM.
 
-<img width="1100" alt="image" src="https://github.com/user-attachments/assets/f6286a37-dc1e-440e-922e-3d47f0583ac0">
+<img width="962" alt="image" src="https://github.com/user-attachments/assets/6cce4422-d660-4a7a-bfa2-ba793f48d6d4" />
 
 You can see the workflows and jobs triggered by an event such as a pull request.
 
