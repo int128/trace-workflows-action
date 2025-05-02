@@ -48,7 +48,16 @@ jobs:
     steps:
       - uses: int128/trace-workflows-action@v0
         env:
-          OTEL_EXPORTER_OTLP_ENDPOINT: http://opentelemetry-collector:4318
+          # For dry-run, write the trace to the standard output.
+          OTEL_TRACES_EXPORTER: console
+```
+
+You can set the `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable to the OpenTelemetry Collector endpoint.
+
+```yaml
+- uses: int128/trace-workflows-action@v0
+  env:
+    OTEL_EXPORTER_OTLP_ENDPOINT: http://opentelemetry-collector:4318
 ```
 
 ## Example
@@ -129,8 +138,8 @@ See [the GraphQL query](src/queries/listChecks.ts) for details.
 
 ### Environment variables
 
-This action accepts the environment variables for the OTLP exporter.
-See https://opentelemetry.io/docs/languages/sdk-configuration/otlp-exporter/ for details.
+This action accepts the environment variables for the OpenTelemetry SDK.
+See https://opentelemetry.io/docs/languages/sdk-configuration/ for details.
 
 ### Outputs
 
