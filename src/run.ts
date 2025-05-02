@@ -10,7 +10,6 @@ const GITHUB_ACTIONS_APP_ID = 15368
 
 export type Inputs = {
   pageSizeOfCheckSuites: number
-  pageSizeOfCheckRuns: number
 }
 
 export const run = async (inputs: Inputs, octokit: Octokit, context: github.Context): Promise<void> => {
@@ -34,6 +33,7 @@ export const run = async (inputs: Inputs, octokit: Octokit, context: github.Cont
           repo: context.repo.repo,
           run_id: workflowRunId,
           filter: 'latest',
+          per_page: 100,
         }),
       ),
   )

@@ -10,10 +10,6 @@ inputs:
     description: Page size of CheckSuites query
     required: true
     default: '100'
-  page-size-of-check-runs:
-    description: Page size of CheckRuns query
-    required: true
-    default: '100'
 
 runs:
   using: 'node20'
