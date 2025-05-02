@@ -1,72 +1,45 @@
 # trace-workflows-action [![ts](https://github.com/int128/trace-workflows-action/actions/workflows/ts.yaml/badge.svg)](https://github.com/int128/trace-workflows-action/actions/workflows/ts.yaml)
 
-This is an action to export a trace of GitHub Actions workflows to OpenTelemetry.
-It is designed for a monorepo repository with multiple workflows.
+This is an action to export the trace of GitHub Actions workflows to OpenTelemetry.
+
+## Purpose
+
+You can analyze the timeline of workflows and jobs in a single trace.
+This is useful for a mono-repository (monorepo) with many workflows.
+
+Here is an example of the trace exported to Datadog APM.
+
+<img width="1100" alt="image" src="https://github.com/user-attachments/assets/f6286a37-dc1e-440e-922e-3d47f0583ac0">
+
+You can see the workflows and jobs triggered by an event such as a pull request.
 
 ## Getting Started
 
-This action fetches all workflows run on the target commit.
-You need to run this action after all workflows are completed.
-
-### 1. Create a workflow to wait for all workflows
-
-This workflow runs on pull requests and waits for all workflows to be completed,
-using [wait-for-workflows-action](https://github.com/int128/wait-for-workflows-action).
-
-```yaml
-name: wait-for-workflows
-
-on:
-  pull_request:
-
-jobs:
-  wait-for-workflows:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: int128/wait-for-workflows-action@v1
-```
-
-### 2. Create a workflow to export the trace
-
-This workflow runs on the completion of the `wait-for-workflows` workflow.
+This workflow exports the trace of the workflows triggered by a pull request.
 
 ```yaml
 name: trace-workflows
 
 on:
-  workflow_run:
-    types:
-      - completed
-    workflows:
-      - wait-for-workflows
+  pull_request:
 
 jobs:
   trace-workflows:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
+      # Wait for all workflows to be completed.
+      - uses: int128/wait-for-workflows-action@v1
+      # Export the trace.
       - uses: int128/trace-workflows-action@v0
         env:
           # For dry-run, write the trace to the standard output.
           OTEL_TRACES_EXPORTER: console
+          # For production, export the trace to OpenTelemetry Collector.
+          OTEL_EXPORTER_OTLP_ENDPOINT: http://opentelemetry-collector:4318
 ```
 
-You can set the `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable to the OpenTelemetry Collector endpoint.
-
-```yaml
-- uses: int128/trace-workflows-action@v0
-  env:
-    OTEL_EXPORTER_OTLP_ENDPOINT: http://opentelemetry-collector:4318
-```
-
-## Example
-
-Here is an example of trace exported to Datadog APM.
-
-<img width="1100" alt="image" src="https://github.com/user-attachments/assets/f6286a37-dc1e-440e-922e-3d47f0583ac0">
-
-## Spans
+## Trace structure
 
 This action exports the following spans:
 
@@ -127,8 +100,11 @@ The span contains the following attributes:
 
 ## Specification
 
-This action fetches the workflows run on the target commit.
-See [the GraphQL query](src/queries/listChecks.ts) for details.
+This action fetches the workflows run on the following commit:
+
+- If this action is called on `workflow_run` event, it fetches the workflows run on the target commit.
+- If this action is called on `pull_request` event, it fetches the workflows run on the head commit of the pull request.
+- Otherwise, it fetches the workflows run on the current commit.
 
 ### Inputs
 
