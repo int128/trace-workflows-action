@@ -5,7 +5,6 @@ import { run } from './run.js'
 const main = async () => {
   await run(
     {
-      enableOTLPExporter: core.getBooleanInput('enable-otlp-exporter'),
       pageSizeOfCheckSuites: parseInt(core.getInput('page-size-of-check-suites', { required: true })),
       pageSizeOfCheckRuns: parseInt(core.getInput('page-size-of-check-runs', { required: true })),
     },

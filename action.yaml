@@ -6,10 +6,6 @@ inputs:
     description: GitHub Token
     required: true
     default: ${{ github.token }}
-  enable-otlp-exporter:
-    description: Enable OTLP exporter
-    required: false
-    default: 'false'
   page-size-of-check-suites:
     description: Page size of CheckSuites query
     required: true

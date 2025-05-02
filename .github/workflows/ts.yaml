@@ -41,6 +41,8 @@ jobs:
         with:
           page-size-of-check-suites: 1
           page-size-of-check-runs: 1
+        env:
+          OTEL_TRACES_EXPORTER: console
 
   generate:
     runs-on: ubuntu-latest
