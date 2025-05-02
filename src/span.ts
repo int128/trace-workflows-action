@@ -1,8 +1,6 @@
 import * as core from '@actions/core'
 import { resourceFromAttributes } from '@opentelemetry/resources'
-import { ConsoleSpanExporter } from '@opentelemetry/sdk-trace-node'
 import { Context } from './github.js'
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto'
 import { NodeSDK } from '@opentelemetry/sdk-node'
 import { CheckConclusionState } from './generated/graphql-types.js'
 import { Job, Step, WorkflowEvent, WorkflowRun } from './checks.js'
@@ -21,10 +19,8 @@ import {
   ATTR_HOST_NAME,
 } from '@opentelemetry/semantic-conventions/incubating'
 
-export const exportTrace = async (event: WorkflowEvent, context: Context, enableOTLPExporter: boolean) => {
-  const traceExporter = enableOTLPExporter ? new OTLPTraceExporter() : new ConsoleSpanExporter()
+export const exportTrace = async (event: WorkflowEvent, context: Context) => {
   const sdk = new NodeSDK({
-    traceExporter,
     // Exclude the current environment attributes.
     // This action should be run on workflow_run event,
     // the current environment does not reflect the target workflows.
@@ -38,10 +34,12 @@ export const exportTrace = async (event: WorkflowEvent, context: Context, enable
   })
   sdk.start()
   try {
+    core.startGroup('Exporting the trace')
     exportEvent(event, context)
+    core.endGroup()
   } finally {
-    await core.group('Flushing the trace exporter', async () => await traceExporter.forceFlush())
-    await core.group('Shutting down OpenTelemetry', async () => await sdk.shutdown())
+    core.info('Shutting down OpenTelemetry')
+    await sdk.shutdown()
   }
 }
 
