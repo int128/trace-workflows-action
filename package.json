@@ -17,7 +17,7 @@
     "@opentelemetry/resources": "2.0.0",
     "@opentelemetry/sdk-node": "0.200.0",
     "@opentelemetry/sdk-trace-node": "2.0.0",
-    "@opentelemetry/semantic-conventions": "1.32.0",
+    "@opentelemetry/semantic-conventions": "1.33.0",
     "graphql": "16.11.0"
   },
   "devDependencies": {
