@@ -1,5 +1,6 @@
 import assert from 'assert'
 import { ListChecksQuery } from './generated/graphql.js'
+import { Octokit } from '@octokit/action'
 import { CheckConclusionState, CheckStatusState } from './generated/graphql-types.js'
 
 export type Filter = {
@@ -28,13 +29,44 @@ export type Job = {
   id: number
   name: string
   url: string
-  status: CheckStatusState
-  conclusion: CheckConclusionState | undefined
+  status: ListJobsForWorkflowRunResult['status']
+  conclusion: ListJobsForWorkflowRunResult['conclusion']
+  runnerLabel: string | undefined
+  createdAt: Date
+  startedAt: Date
+  completedAt: Date
+  steps: Step[]
+}
+
+export type Step = {
+  name: string
+  status: string
+  conclusion: string
   startedAt: Date
   completedAt: Date
 }
 
-export const summaryListChecksQuery = (q: ListChecksQuery, filter: Filter): WorkflowEvent => {
+type ListJobsForWorkflowRunResult = Pick<
+  Awaited<ReturnType<Octokit['rest']['actions']['listJobsForWorkflowRun']>>['data']['jobs'][number],
+  | 'id'
+  | 'name'
+  | 'status'
+  | 'conclusion'
+  | 'html_url'
+  | 'labels'
+  | 'created_at'
+  | 'started_at'
+  | 'completed_at'
+  | 'steps'
+>
+
+export type WorkflowJobsProvider = (workflowRunId: number) => Promise<ListJobsForWorkflowRunResult[]>
+
+export const summaryListChecksQuery = async (
+  q: ListChecksQuery,
+  filter: Filter,
+  workflowJobsProvider: WorkflowJobsProvider,
+): Promise<WorkflowEvent> => {
   assert(q.rateLimit != null)
   assert(q.repository != null)
   assert(q.repository.object != null)
@@ -48,33 +80,55 @@ export const summaryListChecksQuery = (q: ListChecksQuery, filter: Filter): Work
     const checkSuite = checkSuiteEdge.node
     assert(checkSuite != null)
     assert(checkSuite.workflowRun != null)
-    assert(checkSuite.checkRuns != null)
-    assert(checkSuite.checkRuns.edges != null)
     assert(checkSuite.workflowRun.databaseId != null)
     if (checkSuite.workflowRun.event !== filter.event) {
       continue
     }
 
+    const workflowJobs = await workflowJobsProvider(checkSuite.workflowRun.databaseId)
     const jobs: Job[] = []
-    for (const checkRunEdge of checkSuite.checkRuns.edges) {
-      assert(checkRunEdge != null)
-      const checkRun = checkRunEdge.node
-      assert(checkRun != null)
-      assert(checkRun.databaseId != null)
-      if (checkRun.startedAt == null || checkRun.completedAt == null) {
+    for (const workflowJob of workflowJobs) {
+      if (workflowJob.html_url === null) {
         continue
       }
-      if (checkRun.conclusion === CheckConclusionState.Skipped) {
+      if (workflowJob.completed_at === null) {
         continue
       }
+      if (workflowJob.conclusion === 'skipped') {
+        continue
+      }
+
+      const steps: Step[] = []
+      for (const step of workflowJob.steps ?? []) {
+        if (step.started_at == null) {
+          continue
+        }
+        if (step.completed_at == null) {
+          continue
+        }
+        if (step.conclusion === null) {
+          continue
+        }
+        steps.push({
+          name: step.name,
+          status: step.status,
+          conclusion: step.conclusion,
+          startedAt: new Date(step.started_at),
+          completedAt: new Date(step.completed_at),
+        })
+      }
+
       jobs.push({
-        id: checkRun.databaseId,
-        name: checkRun.name,
-        url: `${checkSuite.workflowRun.url}/job/${checkRun.databaseId}`,
-        status: checkRun.status,
-        conclusion: checkRun.conclusion ?? undefined,
-        startedAt: new Date(checkRun.startedAt),
-        completedAt: new Date(checkRun.completedAt),
+        id: workflowJob.id,
+        name: workflowJob.name,
+        url: workflowJob.html_url,
+        status: workflowJob.status,
+        conclusion: workflowJob.conclusion,
+        runnerLabel: workflowJob.labels.at(0),
+        createdAt: new Date(workflowJob.created_at),
+        startedAt: new Date(workflowJob.started_at),
+        completedAt: new Date(workflowJob.completed_at),
+        steps,
       })
     }
 
