@@ -1,12 +1,12 @@
 import { describe } from 'vitest'
 import { it } from 'vitest'
 import { expect } from 'vitest'
-import { summaryListChecksQuery, WorkflowEvent } from '../src/checks.js'
+import { summaryListChecksQuery, WorkflowEvent, WorkflowJobsProvider } from '../src/checks.js'
 import { CheckConclusionState, CheckStatusState } from '../src/generated/graphql-types.js'
 import { ListChecksQuery } from '../src/generated/graphql.js'
 
 describe('summaryListChecksQuery', () => {
-  it('should return a summary of workflow runs', () => {
+  it('should return a summary of workflow runs', async () => {
     const query: ListChecksQuery = {
       __typename: 'Query',
       rateLimit: {
@@ -42,28 +42,6 @@ describe('summaryListChecksQuery', () => {
                   createdAt: '2021-08-04T00:00:00Z',
                   status: CheckStatusState.Completed,
                   conclusion: CheckConclusionState.Success,
-                  checkRuns: {
-                    __typename: 'CheckRunConnection',
-                    pageInfo: {
-                      endCursor: 'CheckRunCursor',
-                      hasNextPage: false,
-                    },
-                    totalCount: 1,
-                    edges: [
-                      {
-                        cursor: 'CheckRunCursor',
-                        node: {
-                          __typename: 'CheckRun',
-                          databaseId: 3,
-                          name: 'build',
-                          status: CheckStatusState.Completed,
-                          conclusion: CheckConclusionState.Success,
-                          startedAt: '2021-08-04T00:00:00Z',
-                          completedAt: '2021-08-04T00:01:00Z',
-                        },
-                      },
-                    ],
-                  },
                 },
               },
             ],
@@ -71,9 +49,32 @@ describe('summaryListChecksQuery', () => {
         },
       },
     }
-    const event = summaryListChecksQuery(query, {
-      event: 'push',
-    })
+    const workflowJobsProvider: WorkflowJobsProvider = () =>
+      Promise.resolve([
+        {
+          id: 3,
+          name: 'build',
+          status: 'completed',
+          conclusion: 'success',
+          html_url: 'https://github.com/int128/trace-workflows-action/actions/runs/2/job/3',
+          run_attempt: 1,
+          labels: ['ubuntu-latest'],
+          created_at: '2021-08-04T00:00:00Z',
+          started_at: '2021-08-04T00:01:00Z',
+          completed_at: '2021-08-04T00:02:00Z',
+          steps: [
+            {
+              number: 1,
+              name: 'build',
+              status: 'completed',
+              conclusion: 'success',
+              started_at: '2021-08-04T00:01:00Z',
+              completed_at: '2021-08-04T00:02:00Z',
+            },
+          ],
+        },
+      ])
+    const event = await summaryListChecksQuery(query, { event: 'push' }, workflowJobsProvider)
     expect(event).toEqual<WorkflowEvent>({
       workflowRuns: [
         {
@@ -84,22 +85,33 @@ describe('summaryListChecksQuery', () => {
           status: CheckStatusState.Completed,
           conclusion: CheckConclusionState.Success,
           createdAt: new Date('2021-08-04T00:00:00Z'),
-          completedAt: new Date('2021-08-04T00:01:00Z'),
+          completedAt: new Date('2021-08-04T00:02:00Z'),
           jobs: [
             {
               id: 3,
               name: 'build',
               url: 'https://github.com/int128/trace-workflows-action/actions/runs/2/job/3',
-              status: CheckStatusState.Completed,
-              conclusion: CheckConclusionState.Success,
-              startedAt: new Date('2021-08-04T00:00:00Z'),
-              completedAt: new Date('2021-08-04T00:01:00Z'),
+              status: 'completed',
+              conclusion: 'success',
+              runnerLabel: 'ubuntu-latest',
+              createdAt: new Date('2021-08-04T00:00:00Z'),
+              startedAt: new Date('2021-08-04T00:01:00Z'),
+              completedAt: new Date('2021-08-04T00:02:00Z'),
+              steps: [
+                {
+                  name: 'build',
+                  status: 'completed',
+                  conclusion: 'success',
+                  startedAt: new Date('2021-08-04T00:01:00Z'),
+                  completedAt: new Date('2021-08-04T00:02:00Z'),
+                },
+              ],
             },
           ],
         },
       ],
       startedAt: new Date('2021-08-04T00:00:00Z'),
-      completedAt: new Date('2021-08-04T00:01:00Z'),
+      completedAt: new Date('2021-08-04T00:02:00Z'),
     })
   })
 })

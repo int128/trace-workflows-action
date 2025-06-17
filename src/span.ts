@@ -3,7 +3,7 @@ import { resourceFromAttributes } from '@opentelemetry/resources'
 import { Context } from './github.js'
 import { NodeSDK } from '@opentelemetry/sdk-node'
 import { CheckConclusionState } from './generated/graphql-types.js'
-import { Job, WorkflowEvent, WorkflowRun } from './checks.js'
+import { Job, Step, WorkflowEvent, WorkflowRun } from './checks.js'
 import { trace, Attributes, Tracer, SpanStatusCode } from '@opentelemetry/api'
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION, ATTR_URL_FULL } from '@opentelemetry/semantic-conventions'
 import {
@@ -118,7 +118,7 @@ const exportJob = (job: Job, tracer: Tracer, attributes: Attributes) => {
     [ATTR_CICD_PIPELINE_TASK_RUN_ID]: job.id,
     [ATTR_CICD_PIPELINE_TASK_RUN_URL_FULL]: job.url,
     'github.job.name': job.name,
-    'github.job.conclusion': job.conclusion,
+    'github.job.conclusion': job.conclusion ?? undefined,
     'github.job.status': job.status,
   }
   tracer.startActiveSpan(
@@ -133,10 +133,45 @@ const exportJob = (job: Job, tracer: Tracer, attributes: Attributes) => {
     },
     (span) => {
       try {
+        tracer.startActiveSpan(
+          'Queued',
+          {
+            startTime: job.createdAt,
+            attributes: {
+              ...jobAttributes,
+              'operation.name': 'job.queued',
+              [ATTR_URL_FULL]: job.url,
+            },
+          },
+          (span) => span.end(job.startedAt),
+        )
+        for (const step of job.steps) {
+          exportStep(step, tracer, jobAttributes)
+        }
         span.setStatus({ code: getStatusCode(job.conclusion) })
       } finally {
         span.end(job.completedAt)
       }
+    },
+  )
+}
+
+const exportStep = (step: Step, tracer: Tracer, attributes: Attributes) => {
+  tracer.startActiveSpan(
+    step.name,
+    {
+      startTime: step.startedAt,
+      attributes: {
+        ...attributes,
+        'operation.name': 'step',
+        'github.step.name': step.name,
+        'github.step.conclusion': step.conclusion,
+        'github.step.status': step.status,
+      },
+    },
+    (span) => {
+      span.setStatus({ code: getStatusCode(step.conclusion) })
+      span.end(step.completedAt)
     },
   )
 }
@@ -163,7 +198,7 @@ const getEventURL = (context: Context): string => {
   return `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/tree/${context.target.ref}`
 }
 
-const getStatusCode = (conclusion: CheckConclusionState | undefined): SpanStatusCode => {
+const getStatusCode = (conclusion: string | null | undefined): SpanStatusCode => {
   switch (conclusion) {
     case CheckConclusionState.Success:
       return SpanStatusCode.OK
@@ -171,6 +206,9 @@ const getStatusCode = (conclusion: CheckConclusionState | undefined): SpanStatus
     case CheckConclusionState.StartupFailure:
     case CheckConclusionState.TimedOut:
     case CheckConclusionState.Cancelled:
+    case 'failure':
+    case 'timed_out':
+    case 'cancelled':
       return SpanStatusCode.ERROR
     default:
       return SpanStatusCode.UNSET
