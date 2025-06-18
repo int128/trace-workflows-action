@@ -80,7 +80,7 @@ const createQueryFunction =
   async (v: ListChecksQueryVariables): Promise<ListChecksQuery> =>
     core.group(`ListChecksQuery(${JSON.stringify(v)})`, async () => {
       const q: ListChecksQuery = await octokit.graphql(query, v)
-      assert(q.rateLimit != null)
+      assert(q.rateLimit != null, `rateLimit must not be null`)
       core.info(`rateLimit.cost: ${q.rateLimit.cost}`)
       core.info(`rateLimit.remaining: ${q.rateLimit.remaining}`)
       core.debug(JSON.stringify(q, undefined, 2))
@@ -106,14 +106,14 @@ const paginateCheckSuites = async (
   v: ListChecksQueryVariables,
   cumulativeCheckSuites: CheckSuites,
 ): Promise<void> => {
-  assert(cumulativeCheckSuites.edges != null)
+  assert(cumulativeCheckSuites.edges != null, `cumulativeCheckSuites.edges must not be null`)
   while (cumulativeCheckSuites.pageInfo.hasNextPage) {
     const nextQuery = await fn({
       ...v,
       afterCheckSuite: cumulativeCheckSuites.pageInfo.endCursor,
     })
     const nextCheckSuites = getCheckSuites(nextQuery)
-    assert(nextCheckSuites.edges != null)
+    assert(nextCheckSuites.edges != null, `nextCheckSuites.edges must not be null`)
     cumulativeCheckSuites.edges.push(...nextCheckSuites.edges)
     cumulativeCheckSuites.totalCount = nextCheckSuites.totalCount
     cumulativeCheckSuites.pageInfo = nextCheckSuites.pageInfo
@@ -124,10 +124,10 @@ const paginateCheckSuites = async (
 type CheckSuites = ReturnType<typeof getCheckSuites>
 
 const getCheckSuites = (q: ListChecksQuery) => {
-  assert(q.repository != null)
-  assert(q.repository.object != null)
+  assert(q.repository != null, `repository must not be null`)
+  assert(q.repository.object != null, `repository.object must not be null`)
   assert.strictEqual(q.repository.object.__typename, 'Commit')
-  assert(q.repository.object.checkSuites != null)
+  assert(q.repository.object.checkSuites != null, `repository.object.checkSuites must not be null`)
   return q.repository.object.checkSuites
 }
 
@@ -136,11 +136,11 @@ const paginateCheckRunsOfCheckSuites = async (
   v: ListChecksQueryVariables,
   checkSuites: CheckSuites,
 ) => {
-  assert(checkSuites.edges != null)
+  assert(checkSuites.edges != null, `checkSuites.edges must not be null`)
   for (const checkSuite of previousGenerator(checkSuites.edges)) {
-    assert(checkSuite.current != null)
-    assert(checkSuite.current.node != null)
-    assert(checkSuite.current.node.checkRuns != null)
+    assert(checkSuite.current != null, `checkSuite.current must not be null`)
+    assert(checkSuite.current.node != null, `checkSuite.current.node must not be null`)
+    assert(checkSuite.current.node.checkRuns != null, `checkSuite.current.node.checkRuns must not be null`)
     await paginateCheckRunsOfCheckSuite(
       fn,
       v,
@@ -158,7 +158,7 @@ const paginateCheckRunsOfCheckSuite = async (
   currentCheckSuiteCursor: string,
   cumulativeCheckRuns: CheckRuns,
 ): Promise<void> => {
-  assert(cumulativeCheckRuns.edges != null)
+  assert(cumulativeCheckRuns.edges != null, `cumulativeCheckRuns.edges must not be null`)
   while (cumulativeCheckRuns.pageInfo.hasNextPage) {
     const nextQuery = await fn({
       ...v,
@@ -169,7 +169,7 @@ const paginateCheckRunsOfCheckSuite = async (
       afterCheckRun: cumulativeCheckRuns.pageInfo.endCursor,
     })
     const nextCheckRuns = getCheckRuns(nextQuery, currentCheckSuiteCursor)
-    assert(nextCheckRuns.edges != null)
+    assert(nextCheckRuns.edges != null, `nextCheckRuns.edges must not be null`)
     cumulativeCheckRuns.edges.push(...nextCheckRuns.edges)
     cumulativeCheckRuns.totalCount = nextCheckRuns.totalCount
     cumulativeCheckRuns.pageInfo = nextCheckRuns.pageInfo
@@ -180,16 +180,16 @@ const paginateCheckRunsOfCheckSuite = async (
 type CheckRuns = ReturnType<typeof getCheckRuns>
 
 const getCheckRuns = (q: ListChecksQuery, checkSuiteCursor: string) => {
-  assert(q.repository != null)
-  assert(q.repository.object != null)
+  assert(q.repository != null, `repository must not be null`)
+  assert(q.repository.object != null, `repository.object must not be null`)
   assert.strictEqual(q.repository.object.__typename, 'Commit')
-  assert(q.repository.object.checkSuites != null)
-  assert(q.repository.object.checkSuites.edges != null)
+  assert(q.repository.object.checkSuites != null, `repository.object.checkSuites must not be null`)
+  assert(q.repository.object.checkSuites.edges != null, `repository.object.checkSuites.edges must not be null`)
   for (const checkSuiteEdge of q.repository.object.checkSuites.edges) {
-    assert(checkSuiteEdge != null)
+    assert(checkSuiteEdge != null, `checkSuiteEdge must not be null`)
     if (checkSuiteEdge.cursor === checkSuiteCursor) {
-      assert(checkSuiteEdge.node != null)
-      assert(checkSuiteEdge.node.checkRuns != null)
+      assert(checkSuiteEdge.node != null, `checkSuiteEdge.node must not be null`)
+      assert(checkSuiteEdge.node.checkRuns != null, `checkSuiteEdge.node.checkRuns must not be null`)
       return checkSuiteEdge.node.checkRuns
     }
   }

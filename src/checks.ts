@@ -35,32 +35,32 @@ export type Job = {
 }
 
 export const summaryListChecksQuery = (q: ListChecksQuery, filter: Filter): WorkflowEvent => {
-  assert(q.rateLimit != null)
-  assert(q.repository != null)
-  assert(q.repository.object != null)
+  assert(q.rateLimit != null, `rateLimit must not be null`)
+  assert(q.repository != null, `repository must not be null`)
+  assert(q.repository.object != null, `repository.object must not be null`)
   assert.strictEqual(q.repository.object.__typename, 'Commit')
-  assert(q.repository.object.checkSuites != null)
-  assert(q.repository.object.checkSuites.edges != null)
+  assert(q.repository.object.checkSuites != null, `repository.object.checkSuites must not be null`)
+  assert(q.repository.object.checkSuites.edges != null, `repository.object.checkSuites.edges must not be null`)
 
   const workflowRuns: WorkflowRun[] = []
   for (const checkSuiteEdge of q.repository.object.checkSuites.edges) {
-    assert(checkSuiteEdge != null)
+    assert(checkSuiteEdge != null, `checkSuiteEdge must not be null`)
     const checkSuite = checkSuiteEdge.node
-    assert(checkSuite != null)
-    assert(checkSuite.workflowRun != null)
-    assert(checkSuite.checkRuns != null)
-    assert(checkSuite.checkRuns.edges != null)
-    assert(checkSuite.workflowRun.databaseId != null)
+    assert(checkSuite != null, `checkSuite must not be null`)
+    assert(checkSuite.workflowRun != null, `checkSuite.workflowRun must not be null`)
+    assert(checkSuite.checkRuns != null, `checkSuite.checkRuns must not be null`)
+    assert(checkSuite.checkRuns.edges != null, `checkSuite.checkRuns.edges must not be null`)
+    assert(checkSuite.workflowRun.databaseId != null, `checkSuite.workflowRun.databaseId must not be null`)
     if (checkSuite.workflowRun.event !== filter.event) {
       continue
     }
 
     const jobs: Job[] = []
     for (const checkRunEdge of checkSuite.checkRuns.edges) {
-      assert(checkRunEdge != null)
+      assert(checkRunEdge != null, `checkRunEdge must not be null`)
       const checkRun = checkRunEdge.node
-      assert(checkRun != null)
-      assert(checkRun.databaseId != null)
+      assert(checkRun != null, `checkRun must not be null`)
+      assert(checkRun.databaseId != null, `checkRun.databaseId must not be null`)
       if (checkRun.startedAt == null || checkRun.completedAt == null) {
         continue
       }
