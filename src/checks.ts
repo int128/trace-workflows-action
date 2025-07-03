@@ -47,7 +47,9 @@ export const summaryListChecksQuery = (q: ListChecksQuery, filter: Filter): Work
     assert(checkSuiteEdge != null, `checkSuiteEdge must not be null`)
     const checkSuite = checkSuiteEdge.node
     assert(checkSuite != null, `checkSuite must not be null`)
-    assert(checkSuite.workflowRun != null, `checkSuite.workflowRun must not be null`)
+    if (checkSuite.workflowRun == null) {
+      continue
+    }
     assert(checkSuite.checkRuns != null, `checkSuite.checkRuns must not be null`)
     assert(checkSuite.checkRuns.edges != null, `checkSuite.checkRuns.edges must not be null`)
     assert(checkSuite.workflowRun.databaseId != null, `checkSuite.workflowRun.databaseId must not be null`)
