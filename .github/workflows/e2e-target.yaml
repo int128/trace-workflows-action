@@ -38,7 +38,7 @@ jobs:
       - run: pnpm i
       - run: pnpm build
 
-      - uses: int128/opentelemetry-collector-action@0110110364281640cb911c4cc4f0aaa4886256f1 # v0.36.0
+      - uses: int128/opentelemetry-collector-action@657fa543b2b599e4108a770f93785c90d0a5511e # v0.37.0
         with:
           readiness-probe-port: 13133
           environments: |
