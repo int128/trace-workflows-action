@@ -1,8 +1,8 @@
-import assert from 'assert'
-import * as fs from 'fs/promises'
+import assert from 'node:assert'
+import * as fs from 'node:fs/promises'
 import { Octokit } from '@octokit/action'
-import { WebhookEvent } from '@octokit/webhooks-types'
 import { retry } from '@octokit/plugin-retry'
+import type { WebhookEvent } from '@octokit/webhooks-types'
 
 export const getOctokit = () => new (Octokit.plugin(retry))()
 
@@ -40,7 +40,7 @@ const getBaseContext = async (): Promise<BaseContext> => {
     actor: getEnv('GITHUB_ACTOR'),
     eventName: getEnv('GITHUB_EVENT_NAME'),
     ref: getEnv('GITHUB_REF'),
-    runAttempt: Number.parseInt(getEnv('GITHUB_RUN_ATTEMPT')),
+    runAttempt: Number.parseInt(getEnv('GITHUB_RUN_ATTEMPT'), 10),
     serverUrl: getEnv('GITHUB_SERVER_URL'),
     sha: getEnv('GITHUB_SHA'),
     payload: JSON.parse(await fs.readFile(getEnv('GITHUB_EVENT_PATH'), 'utf-8')) as WebhookEvent,

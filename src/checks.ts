@@ -1,6 +1,6 @@
-import assert from 'assert'
-import { ListChecksQuery } from './generated/graphql.js'
-import { CheckConclusionState, CheckStatusState } from './generated/graphql-types.js'
+import assert from 'node:assert'
+import type { ListChecksQuery } from './generated/graphql.js'
+import { CheckConclusionState, type CheckStatusState } from './generated/graphql-types.js'
 
 export type Filter = {
   event: string
