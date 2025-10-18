@@ -1,9 +1,9 @@
 import * as core from '@actions/core'
+import type { Octokit } from '@octokit/action'
 import { summaryListChecksQuery } from './checks.js'
-import { exportTrace } from './span.js'
+import type { Context } from './github.js'
 import { getListChecksQuery } from './queries/listChecks.js'
-import { Octokit } from '@octokit/action'
-import { Context } from './github.js'
+import { exportTrace } from './span.js'
 
 // https://api.github.com/apps/github-actions
 const GITHUB_ACTIONS_APP_ID = 15368

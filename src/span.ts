@@ -1,10 +1,7 @@
 import * as core from '@actions/core'
+import { type Attributes, SpanStatusCode, type Tracer, trace } from '@opentelemetry/api'
 import { resourceFromAttributes } from '@opentelemetry/resources'
-import { Context } from './github.js'
 import { NodeSDK } from '@opentelemetry/sdk-node'
-import { CheckConclusionState } from './generated/graphql-types.js'
-import { Job, WorkflowEvent, WorkflowRun } from './checks.js'
-import { trace, Attributes, Tracer, SpanStatusCode } from '@opentelemetry/api'
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION, ATTR_URL_FULL } from '@opentelemetry/semantic-conventions'
 import {
   ATTR_CICD_PIPELINE_NAME,
@@ -18,6 +15,9 @@ import {
   ATTR_DEPLOYMENT_ENVIRONMENT_NAME,
   ATTR_HOST_NAME,
 } from '@opentelemetry/semantic-conventions/incubating'
+import type { Job, WorkflowEvent, WorkflowRun } from './checks.js'
+import { CheckConclusionState } from './generated/graphql-types.js'
+import type { Context } from './github.js'
 
 export const exportTrace = async (event: WorkflowEvent, context: Context) => {
   const sdk = new NodeSDK({
