@@ -126,7 +126,10 @@ export const completeStepsForFailedJobs = async (
   )
 
   for (const workflowRun of workflowRunsToComplete) {
-    const q = await getListStepsQuery({ checkSuiteId: workflowRun.checkSuiteGraphqlId })
+    const q = await getListStepsQuery({
+      checkSuiteId: workflowRun.checkSuiteGraphqlId,
+      checkRunConclusions: [CheckConclusionState.Failure, CheckConclusionState.TimedOut],
+    })
     assert(q.node != null, `node must not be null`)
     assert.strictEqual(q.node.__typename, 'CheckSuite')
     assert(q.node.checkRuns != null, `node.checkRuns must not be null`)

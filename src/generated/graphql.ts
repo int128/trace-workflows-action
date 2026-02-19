@@ -21,6 +21,7 @@ export type ListChecksQuery = { __typename?: 'Query', rateLimit?: { __typename?:
 
 export type ListStepsQueryVariables = Types.Exact<{
   checkSuiteId: Types.Scalars['ID']['input'];
+  checkRunConclusions?: Types.InputMaybe<Array<Types.CheckConclusionState> | Types.CheckConclusionState>;
 }>;
 
 
