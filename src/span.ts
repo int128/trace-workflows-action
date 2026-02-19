@@ -15,7 +15,7 @@ import {
   ATTR_DEPLOYMENT_ENVIRONMENT_NAME,
   ATTR_HOST_NAME,
 } from '@opentelemetry/semantic-conventions/incubating'
-import type { Job, WorkflowEvent, WorkflowRun } from './checks.js'
+import type { Job, Step, WorkflowEvent, WorkflowRun } from './checks.js'
 import { CheckConclusionState } from './generated/graphql-types.js'
 import type { Context } from './github.js'
 
@@ -134,9 +134,32 @@ const exportJob = (job: Job, tracer: Tracer, attributes: Attributes) => {
     (span) => {
       try {
         span.setStatus({ code: getStatusCode(job.conclusion) })
+        for (const step of job.steps ?? []) {
+          exportStep(step, tracer, jobAttributes)
+        }
       } finally {
         span.end(job.completedAt)
       }
+    },
+  )
+}
+
+const exportStep = (step: Step, tracer: Tracer, attributes: Attributes) => {
+  tracer.startActiveSpan(
+    step.name,
+    {
+      startTime: step.startedAt,
+      attributes: {
+        ...attributes,
+        'operation.name': 'step',
+        'github.step.name': step.name,
+        'github.step.conclusion': step.conclusion,
+        'github.step.status': step.status,
+      },
+    },
+    (span) => {
+      span.setStatus({ code: getStatusCode(step.conclusion) })
+      span.end(step.completedAt)
     },
   )
 }
