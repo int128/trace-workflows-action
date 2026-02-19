@@ -27,6 +27,7 @@ describe('summaryListChecksQuery', () => {
                 cursor: 'CheckSuiteCursor',
                 node: {
                   __typename: 'CheckSuite',
+                  id: 'CS_2',
                   workflowRun: {
                     __typename: 'WorkflowRun',
                     databaseId: 2,
@@ -76,6 +77,7 @@ describe('summaryListChecksQuery', () => {
       workflowRuns: [
         {
           id: 2,
+          checkSuiteGraphqlId: 'CS_2',
           event: 'push',
           workflowName: 'CI',
           url: 'https://github.com/int128/trace-workflows-action/actions/runs/2',
