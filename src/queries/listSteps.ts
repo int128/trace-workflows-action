@@ -5,6 +5,7 @@ import type { ListStepsQuery, ListStepsQueryVariables } from '../generated/graph
 const query = /* GraphQL */ `
   query listSteps($checkSuiteId: ID!) {
     node(id: $checkSuiteId) {
+      __typename
       ... on CheckSuite {
         checkRuns(first: 100, filterBy: { checkType: LATEST, status: COMPLETED, conclusions: [FAILURE, TIMED_OUT] }) {
           nodes {
