@@ -39,6 +39,7 @@ const query = /* GraphQL */ `
                   }
                   url
                 }
+                id
                 status
                 conclusion
                 createdAt

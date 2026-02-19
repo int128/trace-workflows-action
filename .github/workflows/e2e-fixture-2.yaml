@@ -13,3 +13,5 @@ jobs:
         id: [4, 5]
     steps:
       - run: sleep '${{ matrix.id }}'
+      # - if: matrix.id == 5
+      #   run: exit 1

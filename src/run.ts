@@ -1,8 +1,9 @@
 import * as core from '@actions/core'
 import type { Octokit } from '@octokit/action'
-import { summaryListChecksQuery } from './checks.js'
+import { completeStepsForFailedJobs, summaryListChecksQuery } from './checks.js'
 import type { Context } from './github.js'
 import { getListChecksQuery } from './queries/listChecks.js'
+import { getListStepsQuery } from './queries/listSteps.js'
 import { exportTrace } from './span.js'
 
 // https://api.github.com/apps/github-actions
@@ -26,6 +27,7 @@ export const run = async (inputs: Inputs, octokit: Octokit, context: Context): P
   const event = summaryListChecksQuery(listChecksQuery, {
     event: context.target.eventName,
   })
+  await completeStepsForFailedJobs(event, async (v) => await getListStepsQuery(octokit, v))
   core.startGroup('Event')
   core.info(JSON.stringify(event, undefined, 2))
   core.endGroup()

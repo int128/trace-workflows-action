@@ -1,5 +1,5 @@
 import assert from 'node:assert'
-import type { ListChecksQuery } from './generated/graphql.js'
+import type { ListChecksQuery, ListStepsQuery, ListStepsQueryVariables } from './generated/graphql.js'
 import { CheckConclusionState, type CheckStatusState } from './generated/graphql-types.js'
 
 export type Filter = {
@@ -14,6 +14,7 @@ export type WorkflowEvent = {
 
 export type WorkflowRun = {
   id: number
+  checkSuiteGraphqlId: string
   event: string
   workflowName: string
   url: string
@@ -28,6 +29,15 @@ export type Job = {
   id: number
   name: string
   url: string
+  status: CheckStatusState
+  conclusion: CheckConclusionState | undefined
+  startedAt: Date
+  completedAt: Date
+  steps?: Step[]
+}
+
+export type Step = {
+  name: string
   status: CheckStatusState
   conclusion: CheckConclusionState | undefined
   startedAt: Date
@@ -86,6 +96,7 @@ export const summaryListChecksQuery = (q: ListChecksQuery, filter: Filter): Work
     }
     workflowRuns.push({
       id: checkSuite.workflowRun.databaseId,
+      checkSuiteGraphqlId: checkSuite.id,
       event: checkSuite.workflowRun.event,
       workflowName: checkSuite.workflowRun.workflow.name,
       url: checkSuite.workflowRun.url,
@@ -101,6 +112,53 @@ export const summaryListChecksQuery = (q: ListChecksQuery, filter: Filter): Work
     workflowRuns,
     startedAt: minDate(workflowRuns.map((x) => x.createdAt)),
     completedAt: maxDate(workflowRuns.map((x) => x.completedAt)),
+  }
+}
+
+export const completeStepsForFailedJobs = async (
+  workflowEvent: WorkflowEvent,
+  getListStepsQuery: (v: ListStepsQueryVariables) => Promise<ListStepsQuery>,
+) => {
+  const workflowRunsToComplete = workflowEvent.workflowRuns.filter(
+    (workflowRun) =>
+      workflowRun.conclusion === CheckConclusionState.Failure ||
+      workflowRun.conclusion === CheckConclusionState.TimedOut,
+  )
+
+  for (const workflowRun of workflowRunsToComplete) {
+    const q = await getListStepsQuery({
+      checkSuiteId: workflowRun.checkSuiteGraphqlId,
+      checkRunConclusions: [CheckConclusionState.Failure, CheckConclusionState.TimedOut],
+    })
+    assert(q.node != null, `node must not be null`)
+    assert.strictEqual(q.node.__typename, 'CheckSuite')
+    assert(q.node.checkRuns != null, `node.checkRuns must not be null`)
+    assert(q.node.checkRuns.nodes != null, `node.checkRuns.nodes must not be null`)
+
+    for (const checkRun of q.node.checkRuns.nodes) {
+      assert(checkRun != null, `checkRun must not be null`)
+      const job = workflowRun.jobs.find((job) => job.id === checkRun.databaseId)
+      if (job == null) {
+        continue
+      }
+      assert(checkRun.steps != null, `checkRun.steps must not be null`)
+      assert(checkRun.steps.nodes != null, `checkRun.steps.nodes must not be null`)
+      const steps: Step[] = []
+      for (const step of checkRun.steps.nodes) {
+        assert(step != null, `step must not be null`)
+        if (step.startedAt == null || step.completedAt == null) {
+          continue
+        }
+        steps.push({
+          name: step.name,
+          status: step.status,
+          conclusion: step.conclusion ?? undefined,
+          startedAt: new Date(step.startedAt),
+          completedAt: new Date(step.completedAt),
+        })
+      }
+      job.steps = steps
+    }
   }
 }
 
