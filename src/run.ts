@@ -5,6 +5,7 @@ import type { Context } from './github.js'
 import { getListChecksQuery } from './queries/listChecks.js'
 import { getListStepsQuery } from './queries/listSteps.js'
 import { exportTrace } from './span.js'
+import { writeTraceSummary } from './summary.js'
 
 // https://api.github.com/apps/github-actions
 const GITHUB_ACTIONS_APP_ID = 15368
@@ -31,5 +32,6 @@ export const run = async (inputs: Inputs, octokit: Octokit, context: Context): P
   core.startGroup('Event')
   core.info(JSON.stringify(event, undefined, 2))
   core.endGroup()
+  await writeTraceSummary(event)
   await exportTrace(event, context)
 }
