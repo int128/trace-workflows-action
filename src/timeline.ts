@@ -1,9 +1,7 @@
-import * as core from '@actions/core'
 import type { WorkflowEvent } from './checks.js'
 import { CheckConclusionState } from './generated/graphql-types.js'
 
-export const writeTraceSummary = async (event: WorkflowEvent) => {
-  core.summary.addHeading('trace-workflows summary', 2)
+export const generateTimeline = (event: WorkflowEvent) => {
   const lines = ['gantt', 'dateFormat YYYY-MM-DDTHH:mm:ssZ', 'axisFormat %H:%M:%S']
   if (event.startedAt) {
     lines.push(`Started :vert, ${event.startedAt.toISOString()}, 0s`)
@@ -36,8 +34,7 @@ export const writeTraceSummary = async (event: WorkflowEvent) => {
       lines.push(`${workflowRun.workflowName} :${tag}, ${workflowRun.createdAt.toISOString()}, ${seconds}s`)
     }
   }
-  core.summary.addCodeBlock(lines.join('\n'), 'mermaid')
-  await core.summary.write()
+  return lines.join('\n')
 }
 
 const getTag = (conclusion: CheckConclusionState | undefined): string => {

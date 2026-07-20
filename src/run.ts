@@ -5,7 +5,7 @@ import type { Context } from './github.js'
 import { getListChecksQuery } from './queries/listChecks.js'
 import { getListStepsQuery } from './queries/listSteps.js'
 import { exportTrace } from './span.js'
-import { writeTraceSummary } from './summary.js'
+import { generateTimeline } from './timeline.js'
 
 // https://api.github.com/apps/github-actions
 const GITHUB_ACTIONS_APP_ID = 15368
@@ -15,7 +15,11 @@ export type Inputs = {
   pageSizeOfCheckRuns: number
 }
 
-export const run = async (inputs: Inputs, octokit: Octokit, context: Context): Promise<void> => {
+type Outputs = {
+  timeline: string
+}
+
+export const run = async (inputs: Inputs, octokit: Octokit, context: Context): Promise<Outputs> => {
   const listChecksQuery = await getListChecksQuery(octokit, {
     owner: context.repo.owner,
     name: context.repo.repo,
@@ -29,9 +33,17 @@ export const run = async (inputs: Inputs, octokit: Octokit, context: Context): P
     event: context.target.eventName,
   })
   await completeStepsForFailedJobs(event, async (v) => await getListStepsQuery(octokit, v))
+
+  const timeline = generateTimeline(event)
+  core.summary.addHeading('trace-workflows summary', 2)
+  core.summary.addCodeBlock(timeline, 'mermaid')
+  await core.summary.write()
+
   core.startGroup('Event')
   core.info(JSON.stringify(event, undefined, 2))
   core.endGroup()
-  await writeTraceSummary(event)
+
   await exportTrace(event, context)
+
+  return { timeline }
 }

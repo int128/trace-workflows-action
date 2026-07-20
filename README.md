@@ -7,11 +7,29 @@ This is an action to export the trace of GitHub Actions workflows to OpenTelemet
 You can analyze the timeline of workflows and jobs in a single trace.
 This is useful for a mono-repository (monorepo) with many workflows.
 
-Here is an example of the trace exported to Datadog APM.
+Here is an example of the trace.
+
+```mermaid
+gantt
+dateFormat YYYY-MM-DDTHH:mm:ssZ
+axisFormat %H:%M:%S
+Started :vert, 2026-07-20T04:47:36.000Z, 0s
+Completed :vert, 2026-07-20T04:47:56.000Z, 0s
+section e2e-fixture-1 (pull_request)
+e2e-fixture-1 / do (3) :, 2026-07-20T04:47:39.000Z, 6s
+e2e-fixture-1 / do (1) :, 2026-07-20T04:47:40.000Z, 6s
+e2e-fixture-1 / do (2) :, 2026-07-20T04:47:40.000Z, 4s
+section e2e-fixture-2 (pull_request)
+e2e-fixture-2 / do (4) :, 2026-07-20T04:47:40.000Z, 7s
+e2e-fixture-2 / do (5) :, 2026-07-20T04:47:39.000Z, 8s
+section ts (pull_request)
+ts / generate :, 2026-07-20T04:47:39.000Z, 15s
+ts / test :, 2026-07-20T04:47:40.000Z, 16s
+```
+
+You can export the trace to OpenTelemetry such as Datadog APM.
 
 <img width="962" alt="image" src="https://github.com/user-attachments/assets/6cce4422-d660-4a7a-bfa2-ba793f48d6d4" />
-
-You can see the workflows and jobs triggered by an event such as a pull request.
 
 ## Getting Started
 
@@ -119,4 +137,6 @@ See https://opentelemetry.io/docs/languages/sdk-configuration/ for details.
 
 ### Outputs
 
-None.
+| Name       | Description                                        |
+| ---------- | -------------------------------------------------- |
+| `timeline` | The mermaid Gantt chart of the workflows and jobs. |

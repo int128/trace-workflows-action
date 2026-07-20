@@ -15,6 +15,10 @@ inputs:
     required: true
     default: '100'
 
+outputs:
+  timeline:
+    description: The mermaid Gantt chart of the workflows and jobs.
+
 runs:
   using: 'node24'
   main: 'dist/index.js'
