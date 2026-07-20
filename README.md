@@ -13,18 +13,18 @@ Here is an example of the trace.
 gantt
 dateFormat YYYY-MM-DDTHH:mm:ssZ
 axisFormat %H:%M:%S
-Started :vert, 2026-07-20T04:47:36.000Z, 0s
-Completed :vert, 2026-07-20T04:47:56.000Z, 0s
+Started :vert, 2026-07-20T05:06:51.000Z, 0s
+Completed :vert, 2026-07-20T05:07:11.000Z, 0s
 section e2e-fixture-1 (pull_request)
-e2e-fixture-1 / do (3) :, 2026-07-20T04:47:39.000Z, 6s
-e2e-fixture-1 / do (1) :, 2026-07-20T04:47:40.000Z, 6s
-e2e-fixture-1 / do (2) :, 2026-07-20T04:47:40.000Z, 4s
-section e2e-fixture-2 (pull_request)
-e2e-fixture-2 / do (4) :, 2026-07-20T04:47:40.000Z, 7s
-e2e-fixture-2 / do (5) :, 2026-07-20T04:47:39.000Z, 8s
+e2e-fixture-1 / do (3) :, 2026-07-20T05:06:54.000Z, 5s
+e2e-fixture-1 / do (1) :, 2026-07-20T05:06:54.000Z, 4s
+e2e-fixture-1 / do (2) :, 2026-07-20T05:06:55.000Z, 4s
 section ts (pull_request)
-ts / generate :, 2026-07-20T04:47:39.000Z, 15s
-ts / test :, 2026-07-20T04:47:40.000Z, 16s
+ts / generate :, 2026-07-20T05:06:54.000Z, 15s
+ts / test :, 2026-07-20T05:06:55.000Z, 16s
+section e2e-fixture-2 (pull_request)
+e2e-fixture-2 / do (4) :, 2026-07-20T05:06:55.000Z, 7s
+e2e-fixture-2 / do (5) :, 2026-07-20T05:06:56.000Z, 7s
 ```
 
 You can export the trace to OpenTelemetry such as Datadog APM.
