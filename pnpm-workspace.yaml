@@ -1,2 +1,3 @@
 allowBuilds:
+  pnpm: false
   protobufjs: false
