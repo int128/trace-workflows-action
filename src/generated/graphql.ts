@@ -1,31 +1,71 @@
+/** Internal type. DO NOT USE DIRECTLY. */
+type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
+/** Internal type. DO NOT USE DIRECTLY. */
+export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
 import * as Types from './graphql-types.js';
 
-export type ListChecksQueryVariables = Types.Exact<{
-  owner: Types.Scalars['String']['input'];
-  name: Types.Scalars['String']['input'];
-  oid: Types.Scalars['GitObjectID']['input'];
-  appId: Types.Scalars['Int']['input'];
-  firstCheckSuite: Types.Scalars['Int']['input'];
-  afterCheckSuite?: Types.InputMaybe<Types.Scalars['String']['input']>;
-  firstCheckRun: Types.Scalars['Int']['input'];
-  afterCheckRun?: Types.InputMaybe<Types.Scalars['String']['input']>;
+/** The possible states for a check suite or run conclusion. */
+export type CheckConclusionState =
+  /** The check suite or run requires action. */
+  | 'ACTION_REQUIRED'
+  /** The check suite or run has been cancelled. */
+  | 'CANCELLED'
+  /** The check suite or run has failed. */
+  | 'FAILURE'
+  /** The check suite or run was neutral. */
+  | 'NEUTRAL'
+  /** The check suite or run was skipped. */
+  | 'SKIPPED'
+  /** The check suite or run was marked stale by GitHub. Only GitHub can use this conclusion. */
+  | 'STALE'
+  /** The check suite or run has failed at startup. */
+  | 'STARTUP_FAILURE'
+  /** The check suite or run has succeeded. */
+  | 'SUCCESS'
+  /** The check suite or run has timed out. */
+  | 'TIMED_OUT';
+
+/** The possible states for a check suite or run status. */
+export type CheckStatusState =
+  /** The check suite or run has been completed. */
+  | 'COMPLETED'
+  /** The check suite or run is in progress. */
+  | 'IN_PROGRESS'
+  /** The check suite or run is in pending state. */
+  | 'PENDING'
+  /** The check suite or run has been queued. */
+  | 'QUEUED'
+  /** The check suite or run has been requested. */
+  | 'REQUESTED'
+  /** The check suite or run is in waiting state. */
+  | 'WAITING';
+
+export type ListChecksQueryVariables = Exact<{
+  owner: string;
+  name: string;
+  oid: string;
+  appId: number;
+  firstCheckSuite: number;
+  afterCheckSuite?: string | null | undefined;
+  firstCheckRun: number;
+  afterCheckRun?: string | null | undefined;
 }>;
 
 
-export type ListChecksQuery = { __typename?: 'Query', rateLimit?: { __typename?: 'RateLimit', cost: number, remaining: number } | null, repository?: { __typename?: 'Repository', object?:
+export type ListChecksQuery = { rateLimit: { cost: number, remaining: number } | null, repository: { object:
       | { __typename: 'Blob' }
-      | { __typename: 'Commit', checkSuites?: { __typename?: 'CheckSuiteConnection', totalCount: number, pageInfo: { __typename?: 'PageInfo', hasNextPage: boolean, endCursor?: string | null }, edges?: Array<{ __typename?: 'CheckSuiteEdge', cursor: string, node?: { __typename?: 'CheckSuite', id: string, status: Types.CheckStatusState, conclusion?: Types.CheckConclusionState | null, createdAt: string, workflowRun?: { __typename?: 'WorkflowRun', databaseId?: number | null, event: string, url: string, workflow: { __typename?: 'Workflow', name: string } } | null, checkRuns?: { __typename?: 'CheckRunConnection', totalCount: number, pageInfo: { __typename?: 'PageInfo', hasNextPage: boolean, endCursor?: string | null }, edges?: Array<{ __typename?: 'CheckRunEdge', cursor: string, node?: { __typename?: 'CheckRun', databaseId?: number | null, name: string, status: Types.CheckStatusState, conclusion?: Types.CheckConclusionState | null, startedAt?: string | null, completedAt?: string | null } | null } | null> | null } | null } | null } | null> | null } | null }
+      | { __typename: 'Commit', checkSuites: { totalCount: number, pageInfo: { hasNextPage: boolean, endCursor: string | null }, edges: Array<{ cursor: string, node: { id: string, status: Types.CheckStatusState, conclusion: Types.CheckConclusionState | null, createdAt: string, workflowRun: { databaseId: number | null, event: string, url: string, workflow: { name: string } } | null, checkRuns: { totalCount: number, pageInfo: { hasNextPage: boolean, endCursor: string | null }, edges: Array<{ cursor: string, node: { databaseId: number | null, name: string, status: Types.CheckStatusState, conclusion: Types.CheckConclusionState | null, startedAt: string | null, completedAt: string | null } | null } | null> | null } | null } | null } | null> | null } | null }
       | { __typename: 'Tag' }
       | { __typename: 'Tree' }
      | null } | null };
 
-export type ListStepsQueryVariables = Types.Exact<{
-  checkSuiteId: Types.Scalars['ID']['input'];
-  checkRunConclusions?: Types.InputMaybe<Array<Types.CheckConclusionState> | Types.CheckConclusionState>;
+export type ListStepsQueryVariables = Exact<{
+  checkSuiteId: string | number;
+  checkRunConclusions?: Array<Types.CheckConclusionState> | Types.CheckConclusionState | null | undefined;
 }>;
 
 
-export type ListStepsQuery = { __typename?: 'Query', node?:
+export type ListStepsQuery = { node:
     | { __typename: 'AddedToMergeQueueEvent' }
     | { __typename: 'AddedToProjectEvent' }
     | { __typename: 'App' }
@@ -46,7 +86,7 @@ export type ListStepsQuery = { __typename?: 'Query', node?:
     | { __typename: 'BypassPullRequestAllowance' }
     | { __typename: 'CWE' }
     | { __typename: 'CheckRun' }
-    | { __typename: 'CheckSuite', checkRuns?: { __typename?: 'CheckRunConnection', nodes?: Array<{ __typename?: 'CheckRun', databaseId?: number | null, steps?: { __typename?: 'CheckStepConnection', nodes?: Array<{ __typename?: 'CheckStep', name: string, status: Types.CheckStatusState, conclusion?: Types.CheckConclusionState | null, startedAt?: string | null, completedAt?: string | null } | null> | null } | null } | null> | null } | null }
+    | { __typename: 'CheckSuite', checkRuns: { nodes: Array<{ databaseId: number | null, steps: { nodes: Array<{ name: string, status: Types.CheckStatusState, conclusion: Types.CheckConclusionState | null, startedAt: string | null, completedAt: string | null } | null> | null } | null } | null> | null } | null }
     | { __typename: 'ClosedEvent' }
     | { __typename: 'CodeOfConduct' }
     | { __typename: 'CommentDeletedEvent' }
