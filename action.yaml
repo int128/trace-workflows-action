@@ -9,16 +9,16 @@ inputs:
   page-size-of-check-suites:
     description: Page size of CheckSuites query
     required: true
-    default: '100'
+    default: "100"
   page-size-of-check-runs:
     description: Page size of CheckRuns query
     required: true
-    default: '100'
+    default: "100"
 
 outputs:
   timeline:
     description: The mermaid Gantt chart of the workflows and jobs.
 
 runs:
-  using: 'node24'
-  main: 'dist/index.js'
+  using: "node24"
+  main: "dist/index.js"
